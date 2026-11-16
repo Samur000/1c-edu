@@ -1,0 +1,1300 @@
+<!doctype html>
+<html lang="ru" data-root="../" data-task="3.3">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3.3 Виртуальные таблицы: остатки, обороты, срез последних · Конспекты 1С</title>
+<script src="../assets/boot.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="page-note">
+<div id="topbar"></div>
+<div class="layout">
+  <aside id="toc" aria-label="Содержание"></aside>
+  <main class="note">
+    <header class="note-head">
+      <nav class="crumbs" aria-label="Вы здесь"></nav>
+      <h1>3.3 Виртуальные таблицы: остатки, обороты, срез последних</h1>
+      <div class="note-meta"><strong>Цель:</strong> уметь получать остатки на дату, обороты за период и последнее значение на дату через виртуальные таблицы регистров — и передавать условия в их параметры, а не в <code>ГДЕ</code>. <strong>Время:</strong> 1,5–2 дня, включая подготовку. Застрял больше 30 минут — пиши. <strong>Git:</strong> перед началом создай ветку <code>feature/ch3-t3-virtualnye-tablicy</code>. <strong>Данные на скринах — пример.</strong> Для практики вноси данные строго по таблице из шага 6, иначе цифры не сойдутся с заданиями.</div>
+    </header>
+    <article class="note-body">
+<section class="sec">
+<h2 id="0-подготовка-регистры-в-конфигурации">0. Подготовка: регистры в конфигурации</h2>
+<p>Виртуальные таблицы есть только у регистров, а в учебной конфигурации их пока нет. Создаём регистр накопления, документ расхода, проведение документов и регистр сведений. Подробно регистры и проведение разбираются в главе 5 — сейчас делаем ровно столько, чтобы было с чем писать запросы.</p>
+<h3 id="шаг-1-регистр-накопления-остаткитоваров">Шаг 1. Регистр накопления «ОстаткиТоваров»</h3>
+<p>В навигаторе EDT правый клик по «Регистры накопления» → создать новый регистр. Откроется его редактор.</p>
+<p><strong>Вкладка «Основные»:</strong></p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/01_registr_osnovnye.png" alt="Регистр накопления, вкладка «Основные»" loading="lazy"><figcaption>Регистр накопления, вкладка «Основные»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что сделать</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Имя — <code>ОстаткиТоваров</code>, синоним — «Остатки товаров»</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Вид регистра — «Остатки».</strong> Регистр будет хранить, сколько товара есть. Вид «Обороты» хранит только движения без остатков</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Вкладка «Данные»</strong> — внизу редактора:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/02_registr_dannye.png" alt="Регистр накопления, вкладка «Данные»" loading="lazy"><figcaption>Регистр накопления, вкладка «Данные»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что сделать</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Измерение</strong> <code>Товар</code>, тип <code>СправочникСсылка.Товары</code> — в разрезе чего считаем остаток</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Ресурсы</strong> <code>Количество</code> — Число 15.3 и <code>Сумма</code> — Число 15.2 — что считаем</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Кнопка «+» — добавить измерение или ресурс. Сначала выдели группу «Измерения» или «Ресурсы»</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Стандартные реквизиты создаются сами: период, регистратор — документ, который сделал запись, вид движения — приход или расход</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Измерение</strong> — то, по чему делим: товар, склад. <strong>Ресурс</strong> — число, которое складывается: количество, сумма.</p>
+<p>Синий знак вопроса на значке регистра в навигаторе значит, что у регистра пока нет документов-регистраторов. Пропадёт после шага 3.</p>
+<h3 id="шаг-2-документ-расход-товара">Шаг 2. Документ «Расход товара»</h3>
+<p>Создай документ <code>РасходТовара</code> с табличной частью <code>Товары</code> и такими же колонками, как у прихода: <code>Товар</code> — <code>СправочникСсылка.Товары</code>, <code>Количество</code>, <code>Цена</code>, <code>Сумма</code> — Число. Свою форму не создавай — платформа нарисует её сама.</p>
+<p>Синоним списка — «Расходы товаров», чтобы в интерфейсе было единообразно с приходами.</p>
+<h3 id="шаг-3-движения-документов">Шаг 3. Движения документов</h3>
+<p><strong>Движения</strong> — строки, которые документ записывает в регистр при проведении. Приход пишет «пришло», расход — «ушло».</p>
+<p><strong>3.1. Отметить регистр.</strong> Открой документ <code>ПриходТовара</code> → вкладка «Движения»:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/03_dvizheniya.png" alt="Документ, вкладка «Движения»" loading="lazy"><figcaption>Документ, вкладка «Движения»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что сделать</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>«Проведение» — «Разрешить». По умолчанию так и стоит</td>
+</tr>
+<tr>
+<td>2</td>
+<td>В списке регистров должен появиться <code>ОстаткиТоваров</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Карандаш — выбрать регистры. Отметь <code>ОстаткиТоваров</code> галочкой</td>
+</tr>
+</tbody>
+</table></div>
+<p>То же самое — у документа <code>РасходТовара</code>.</p>
+<p><strong>3.2. Открыть конструктор движений.</strong> Он не на вкладке «Движения», а в модуле:</p>
+<ol>
+<li>Открой модуль объекта документа <code>ПриходТовара</code>.</li>
+<li>Курсор на пустую строку внутри области <code>ОбработчикиСобытий</code>, вне процедур.</li>
+<li>Правый клик → «Конструктор движений…» — в том же меню, где «Конструктор запроса».</li>
+</ol>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/04_konstruktor_pustoy.png" alt="Конструктор движений до заполнения" loading="lazy"><figcaption>Конструктор движений до заполнения</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Поля документа: шапка и табличная часть <code>Товары</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Поля регистра. В колонке «Выражения» указываешь, что в них записать</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Кнопка «Заполнить выражения» — сама подставит поля с одинаковыми именами</td>
+</tr>
+<tr>
+<td>4</td>
+<td>«Результат» — посмотреть код, который получится</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>3.3. Заполнить.</strong> Нажми кнопку 3 и проверь результат:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/05_konstruktor_zapolnen.png" alt="Конструктор движений для прихода, заполненный" loading="lazy"><figcaption>Конструктор движений для прихода, заполненный</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что должно быть</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Вид движения — <strong>Приход</strong>. Клик по ячейке — сменить</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Товар, количество, сумма — из одноимённых полей табличной части</td>
+</tr>
+<tr>
+<td>3</td>
+<td>В скобках — табличная часть, по строкам которой пишутся движения</td>
+</tr>
+<tr>
+<td>4</td>
+<td>«ОК» — вставить код в модуль</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>3.4. Код.</strong> Конструктор создаст процедуру <code>ОбработкаПроведения</code>:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/06_kod_dvizheniy.png" alt="Код, который создал конструктор движений" loading="lazy"><figcaption>Код, который создал конструктор движений</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>ОбработкаПроведения</code> — событие модуля объекта, срабатывает при проведении</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Метки конструктора. Как и у конструктора запроса: если поправишь код между ними руками, при повторном запуске конструктора правки пропадут</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>Записывать = Истина</code> — записать движения после проведения</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Цикл: на каждую строку табличной части — одна строка движения</td>
+</tr>
+</tbody>
+</table></div>
+<p>Сейчас считай этот код чёрным ящиком — разберём в главе 5.</p>
+<p><strong>3.5. То же для расхода.</strong> Модуль объекта <code>РасходТовара</code> → конструктор движений → кнопка «Заполнить выражения» → вид движения поменяй на <strong>Расход</strong>:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/07_konstruktor_rashod.png" alt="Конструктор движений для расхода" loading="lazy"><figcaption>Конструктор движений для расхода</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что должно быть</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Вид движения — <strong>Расход</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Остальные поля — как у прихода</td>
+</tr>
+</tbody>
+</table></div>
+<p>Модуль расхода оформи по стандарту, как модуль прихода:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/08_kod_rashod.png" alt="Модуль объекта расхода с обёрткой" loading="lazy"><figcaption>Модуль объекта расхода с обёрткой</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Обёртка <code>#Если Сервер Или ТолстыйКлиентОбычноеПриложение Или ВнешнееСоединение Тогда</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Область <code>ОбработчикиСобытий</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Единственное отличие от прихода — <code>ВидДвиженияНакопления.Расход</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Конец области, <code>#Иначе</code> с исключением и <code>#КонецЕсли</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="шаг-4-регистр-сведений-ценытоваров">Шаг 4. Регистр сведений «ЦеныТоваров»</h3>
+<p>Правый клик по «Регистры сведений» → создать новый.</p>
+<p><strong>Вкладка «Основные»:</strong></p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/09_ceny_osnovnye.png" alt="Регистр сведений, вкладка «Основные»" loading="lazy"><figcaption>Регистр сведений, вкладка «Основные»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что сделать</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Имя — <code>ЦеныТоваров</code>, синоним — «Цены товаров»</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Периодичность — «День».</strong> Регистр хранит историю: на каждую дату — своя цена</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Режим записи — «Независимый».</strong> Цены вводятся вручную или кодом, а не проведением документа</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Вкладка «Данные»:</strong></p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/10_ceny_dannye.png" alt="Регистр сведений, вкладка «Данные»" loading="lazy"><figcaption>Регистр сведений, вкладка «Данные»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что сделать</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Измерение <code>Товар</code> — <code>СправочникСсылка.Товары</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Ресурс <code>Цена</code> — Число 15.2</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>Период</code> появился сам — из-за периодичности. По нему регистр знает, с какой даты действует цена</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="шаг-5-добавить-объекты-в-раздел-товары">Шаг 5. Добавить объекты в раздел «Товары»</h3>
+<p>Чтобы новые объекты появились в интерфейсе, добавь их в подсистему. Для каждого из трёх — <code>РасходТовара</code>, <code>ОстаткиТоваров</code>, <code>ЦеныТоваров</code>: открой объект → внизу вкладка «Подсистемы» → отметь «Товары».</p>
+<p>Обнови конфигурацию и запусти 1С:Предприятие:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/11_razdel_tovary.png" alt="Раздел «Товары» с новыми объектами" loading="lazy"><figcaption>Раздел «Товары» с новыми объектами</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Список движений регистра «Остатки товаров»</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Документы прихода</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Документы расхода</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Цены — список регистра сведений</td>
+</tr>
+</tbody>
+</table></div>
+<p>Если какого-то объекта нет в разделе — открой его через главное меню (☰) → «Функции для технического специалиста». Там все объекты конфигурации. В старых версиях платформы этот пункт называется «Все функции».</p>
+<h3 id="шаг-6-данные">Шаг 6. Данные</h3>
+<p><strong>6.1. Документы.</strong> Даты — прошлого месяца, чтобы всё было в прошлом:</p>
+<table>
+<thead>
+<tr>
+<th>Дата</th>
+<th>Документ</th>
+<th>Строки</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1-е</td>
+<td>Приход товара</td>
+<td>Мышь × 20, Ноутбук × 5</td>
+</tr>
+<tr>
+<td>10-е</td>
+<td>Расход товара</td>
+<td>Мышь × 8</td>
+</tr>
+<tr>
+<td>15-е</td>
+<td>Приход товара</td>
+<td>Мышь × 10</td>
+</tr>
+<tr>
+<td>20-е</td>
+<td>Расход товара</td>
+<td>Ноутбук × 2</td>
+</tr>
+</tbody>
+</table>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/12_rashod_dokument.png" alt="Документ расхода" loading="lazy"><figcaption>Документ расхода</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что сделать</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>«Провести»,</strong> а не «Записать». Без проведения движений не будет</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Дата документа — она же дата движения в регистре</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Количество. У расхода нет своей формы — сумма сама не посчитается, в этой задаче она не нужна</td>
+</tr>
+</tbody>
+</table></div>
+<p>Старые приходы из прошлых задач не проводи: они только записаны, в регистре их нет — пусть так и остаётся.</p>
+<p><strong>6.2. Цены.</strong> Раздел «Товары» → «Цены товаров» → «Создать»:</p>
+<table>
+<thead>
+<tr>
+<th>Дата</th>
+<th>Товар</th>
+<th>Цена</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1-е</td>
+<td>Мышь</td>
+<td>500</td>
+</tr>
+<tr>
+<td>15-е</td>
+<td>Мышь</td>
+<td>550</td>
+</tr>
+<tr>
+<td>1-е</td>
+<td>Ноутбук</td>
+<td>60 000</td>
+</tr>
+</tbody>
+</table>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/13_ceny_spisok.png" alt="Список регистра «Цены товаров»" loading="lazy"><figcaption>Список регистра «Цены товаров»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>«Создать» — новая запись: период, товар, цена</td>
+</tr>
+<tr>
+<td>2</td>
+<td>История: у одного товара несколько цен на разные даты</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>6.3. Проверка.</strong> Раздел «Товары» → «Остатки товаров»:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/14_dvizheniya_spisok.png" alt="Список движений регистра" loading="lazy"><figcaption>Список движений регистра</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Период — дата движения, совпадает с датой документа</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Регистратор — документ, который сделал запись</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Плюс — приход</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Минус — расход</td>
+</tr>
+</tbody>
+</table></div>
+<p>По таблице из 6.1 должно получиться 6 строк: у первого прихода две строки, у остальных документов по одной.</p>
+</section>
+
+<section class="sec">
+<h2 id="1-что-это-зачем-где-найти">1. Что это, зачем, где найти</h2>
+<h3 id="регистры">Регистры</h3>
+<p><strong>Регистр накопления</strong> — журнал движений: каждое проведение документа добавляет строки «пришло» или «ушло». Как складская книга, где записан каждый приход и расход.</p>
+<p><strong>Регистр сведений</strong> — значения, которые меняются со временем: цены, курсы, оклады. Как прайс-лист, где у каждой цены есть дата, с которой она действует.</p>
+<h3 id="физическая-и-виртуальные-таблицы">Физическая и виртуальные таблицы</h3>
+<p>У регистра есть <strong>физическая таблица</strong> — все движения строками, как они записаны. Из неё можно посчитать остаток самому: сложить приходы, вычесть расходы. Но на тысячах документов это медленно.</p>
+<p><strong>Виртуальные таблицы</strong> — готовые расчёты от платформы. Ты говоришь «остатки на 15-е» — платформа считает сама и быстро: она хранит промежуточные итоги и не перебирает все движения.</p>
+<table>
+<thead>
+<tr>
+<th>Задача</th>
+<th>Таблица</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Сколько товара на дату</td>
+<td><code>РегистрНакопления.ОстаткиТоваров.Остатки</code></td>
+</tr>
+<tr>
+<td>Сколько пришло и ушло за период</td>
+<td><code>РегистрНакопления.ОстаткиТоваров.Обороты</code></td>
+</tr>
+<tr>
+<td>Остаток на начало, движение, остаток на конец</td>
+<td><code>РегистрНакопления.ОстаткиТоваров.ОстаткиИОбороты</code></td>
+</tr>
+<tr>
+<td>Какая цена действовала на дату</td>
+<td><code>РегистрСведений.ЦеныТоваров.СрезПоследних</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Зачем.</strong> Почти любой отчёт в типовых конфигурациях — это запрос к виртуальным таблицам: остатки на складе, продажи за месяц, ведомость, цены на дату. Это основа задач по отчётам.</p>
+</section>
+
+<section class="sec">
+<h2 id="2-остатки">2. Остатки</h2>
+<h3 id="как-пишется">Как пишется</h3>
+<pre><code class="language-bsl">ВЫБРАТЬ
+    Остатки.Товар КАК Товар,
+    Остатки.КоличествоОстаток КАК Количество
+ИЗ
+    РегистрНакопления.ОстаткиТоваров.Остатки(&amp;Дата) КАК Остатки
+
+</code></pre>
+<div class="pdf" data-gallery="pdf-parametry-vt"><div class="pdf-head"><span class="pdf-tag">PDF</span><span class="pdf-name"><strong class="pdf-title">Параметры виртуальной таблицы Остатки</strong> <span class="pdf-meta">4 страницы</span></span><span class="pdf-actions"><button type="button" class="pdf-open">Смотреть</button><a class="pdf-dl" href="files/parametry-vt.pdf" download>Скачать</a></span></div><div class="pdf-pages"><figure class="page"><img src="files/parametry-vt/p1.png" alt="Параметры виртуальной таблицы Остатки, страница 1" loading="lazy"><figcaption>Страница 1 из 4</figcaption></figure><figure class="page"><img src="files/parametry-vt/p2.png" alt="Параметры виртуальной таблицы Остатки, страница 2" loading="lazy"><figcaption>Страница 2 из 4</figcaption></figure><figure class="page"><img src="files/parametry-vt/p3.png" alt="Параметры виртуальной таблицы Остатки, страница 3" loading="lazy"><figcaption>Страница 3 из 4</figcaption></figure><figure class="page"><img src="files/parametry-vt/p4.png" alt="Параметры виртуальной таблицы Остатки, страница 4" loading="lazy"><figcaption>Страница 4 из 4</figcaption></figure></div></div>
+
+<ul>
+<li>В скобках — <strong>параметры виртуальной таблицы</strong>. Первый — момент, на который нужен остаток.</li>
+<li>Поля ресурсов получают окончание <code>Остаток</code>: <code>КоличествоОстаток</code>, <code>СуммаОстаток</code>.</li>
+<li>Строк с нулевым остатком в результате <strong>нет</strong>.</li>
+<li>Без параметра <code>Остатки()</code> — текущие остатки, по всем движениям.</li>
+</ul>
+<h3 id="граница-на-начало-или-на-конец-дня">Граница: на начало или на конец дня</h3>
+<p>⚠️ Остатки считаются <strong>на момент</strong>, и движения ровно в этот момент <strong>не включаются</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Передал</th>
+<th>Что получишь</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>15.01 00:00:00</code></td>
+<td>Остаток <strong>на начало</strong> 15-го — приход 15-го не учтён</td>
+</tr>
+<tr>
+<td><code>КонецДня(15.01)</code></td>
+<td>Остаток <strong>на конец</strong> 15-го — приход учтён</td>
+</tr>
+<tr>
+<td><code>Новый Граница(Дата, ВидГраницы.Включая)</code></td>
+<td>Движения в момент <code>Дата</code> включены</td>
+</tr>
+</tbody>
+</table>
+<p>Пользователь, который просит «остаток на 15-е», почти всегда имеет в виду конец дня. Уточняй, но по умолчанию — <code>КонецДня</code>.</p>
+<h3 id="условие-в-параметр-а-не-в-где">Условие — в параметр, а не в ГДЕ</h3>
+<p>Второй параметр — <strong>условие</strong>: какие строки регистра брать в расчёт.</p>
+<pre><code class="language-bsl">// ✅ Правильно: платформа считает только по нужным товарам
+РегистрНакопления.ОстаткиТоваров.Остатки(&amp;Дата, Товар В (&amp;Товары)) КАК Остатки
+
+// ❌ Неправильно: платформа посчитает остатки по всем товарам, потом отбросит лишние
+РегистрНакопления.ОстаткиТоваров.Остатки(&amp;Дата) КАК Остатки
+ГДЕ
+    Остатки.Товар В (&amp;Товары)
+
+</code></pre>
+<p>Результат одинаковый, но на большой базе второй вариант работает в разы дольше. Это одна из самых частых ошибок, на ревью её замечают сразу.</p>
+<p>В условии параметра поля пишутся <strong>без псевдонима таблицы</strong>: <code>Товар</code>, а не <code>Остатки.Товар</code>. Можно писать только измерения регистра.</p>
+</section>
+
+<section class="sec">
+<h2 id="3-обороты">3. Обороты</h2>
+<pre><code class="language-bsl">ВЫБРАТЬ
+    Обороты.Товар КАК Товар,
+    Обороты.КоличествоПриход КАК Приход,
+    Обороты.КоличествоРасход КАК Расход,
+    Обороты.КоличествоОборот КАК Оборот
+ИЗ
+    РегистрНакопления.ОстаткиТоваров.Обороты(&amp;Начало, &amp;Конец, , ) КАК Обороты
+
+</code></pre>
+<div class="pdf" data-gallery="pdf-oboroty"><div class="pdf-head"><span class="pdf-tag">PDF</span><span class="pdf-name"><strong class="pdf-title">Виртуальная таблица Обороты</strong> <span class="pdf-meta">6 страниц</span></span><span class="pdf-actions"><button type="button" class="pdf-open">Смотреть</button><a class="pdf-dl" href="files/oboroty.pdf" download>Скачать</a></span></div><div class="pdf-pages"><figure class="page"><img src="files/oboroty/p1.png" alt="Виртуальная таблица Обороты, страница 1" loading="lazy"><figcaption>Страница 1 из 6</figcaption></figure><figure class="page"><img src="files/oboroty/p2.png" alt="Виртуальная таблица Обороты, страница 2" loading="lazy"><figcaption>Страница 2 из 6</figcaption></figure><figure class="page"><img src="files/oboroty/p3.png" alt="Виртуальная таблица Обороты, страница 3" loading="lazy"><figcaption>Страница 3 из 6</figcaption></figure><figure class="page"><img src="files/oboroty/p4.png" alt="Виртуальная таблица Обороты, страница 4" loading="lazy"><figcaption>Страница 4 из 6</figcaption></figure><figure class="page"><img src="files/oboroty/p5.png" alt="Виртуальная таблица Обороты, страница 5" loading="lazy"><figcaption>Страница 5 из 6</figcaption></figure><figure class="page"><img src="files/oboroty/p6.png" alt="Виртуальная таблица Обороты, страница 6" loading="lazy"><figcaption>Страница 6 из 6</figcaption></figure></div></div>
+
+<table>
+<thead>
+<tr>
+<th>Параметр по порядку</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Начало</td>
+<td>Начало периода</td>
+</tr>
+<tr>
+<td>Конец</td>
+<td>Конец периода — не забудь <code>КонецДня</code></td>
+</tr>
+<tr>
+<td>Периодичность</td>
+<td>Разбить по дням, месяцам. Пусто — одной суммой за период</td>
+</tr>
+<tr>
+<td>Условие</td>
+<td>Как у остатков</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>КоличествоПриход</code></td>
+<td>Сколько пришло за период</td>
+</tr>
+<tr>
+<td><code>КоличествоРасход</code></td>
+<td>Сколько ушло</td>
+</tr>
+<tr>
+<td><code>КоличествоОборот</code></td>
+<td>Приход минус расход</td>
+</tr>
+</tbody>
+</table>
+<p>Пустые параметры просто пропускаются запятыми.</p>
+<p>Если задать периодичность, например <code>День</code>, появится поле <code>Период</code> — обороты по каждому дню отдельно.</p>
+</section>
+
+<section class="sec">
+<h2 id="4-остатки-и-обороты">4. Остатки и обороты</h2>
+<p>Всё сразу — классическая «ведомость»: сколько было, сколько пришло, сколько ушло, сколько стало.</p>
+<div class="pdf" data-gallery="pdf-ostatki-i-oboroty"><div class="pdf-head"><span class="pdf-tag">PDF</span><span class="pdf-name"><strong class="pdf-title">Виртуальная таблица ОстаткиИОбороты</strong> <span class="pdf-meta">6 страниц</span></span><span class="pdf-actions"><button type="button" class="pdf-open">Смотреть</button><a class="pdf-dl" href="files/ostatki-i-oboroty.pdf" download>Скачать</a></span></div><div class="pdf-pages"><figure class="page"><img src="files/ostatki-i-oboroty/p1.png" alt="Виртуальная таблица ОстаткиИОбороты, страница 1" loading="lazy"><figcaption>Страница 1 из 6</figcaption></figure><figure class="page"><img src="files/ostatki-i-oboroty/p2.png" alt="Виртуальная таблица ОстаткиИОбороты, страница 2" loading="lazy"><figcaption>Страница 2 из 6</figcaption></figure><figure class="page"><img src="files/ostatki-i-oboroty/p3.png" alt="Виртуальная таблица ОстаткиИОбороты, страница 3" loading="lazy"><figcaption>Страница 3 из 6</figcaption></figure><figure class="page"><img src="files/ostatki-i-oboroty/p4.png" alt="Виртуальная таблица ОстаткиИОбороты, страница 4" loading="lazy"><figcaption>Страница 4 из 6</figcaption></figure><figure class="page"><img src="files/ostatki-i-oboroty/p5.png" alt="Виртуальная таблица ОстаткиИОбороты, страница 5" loading="lazy"><figcaption>Страница 5 из 6</figcaption></figure><figure class="page"><img src="files/ostatki-i-oboroty/p6.png" alt="Виртуальная таблица ОстаткиИОбороты, страница 6" loading="lazy"><figcaption>Страница 6 из 6</figcaption></figure></div></div>
+
+<pre><code class="language-bsl">ВЫБРАТЬ
+    ОИО.Товар КАК Товар,
+    ОИО.КоличествоНачальныйОстаток КАК Начало,
+    ОИО.КоличествоПриход КАК Приход,
+    ОИО.КоличествоРасход КАК Расход,
+    ОИО.КоличествоКонечныйОстаток КАК Конец
+ИЗ
+    РегистрНакопления.ОстаткиТоваров.ОстаткиИОбороты(&amp;Начало, &amp;Конец, , , ) КАК ОИО
+
+</code></pre>
+<p>Для каждого товара всегда верно: <strong>начальный + приход − расход = конечный.</strong></p>
+<p>В эту таблицу попадают товары, у которых был остаток или движение за период.</p>
+</section>
+
+<section class="sec">
+<h2 id="5-срез-последних">5. Срез последних</h2>
+<p>Регистр сведений хранит историю: мышь стоила 500 с 1-го и 550 с 15-го. <code>СрезПоследних</code> отвечает на вопрос: <strong>какое значение действовало на дату?</strong></p>
+<div class="pdf" data-gallery="pdf-srez-poslednih"><div class="pdf-head"><span class="pdf-tag">PDF</span><span class="pdf-name"><strong class="pdf-title">Виртуальная таблица СрезПоследних</strong> <span class="pdf-meta">6 страниц</span></span><span class="pdf-actions"><button type="button" class="pdf-open">Смотреть</button><a class="pdf-dl" href="files/srez-poslednih.pdf" download>Скачать</a></span></div><div class="pdf-pages"><figure class="page"><img src="files/srez-poslednih/p1.png" alt="Виртуальная таблица СрезПоследних, страница 1" loading="lazy"><figcaption>Страница 1 из 6</figcaption></figure><figure class="page"><img src="files/srez-poslednih/p2.png" alt="Виртуальная таблица СрезПоследних, страница 2" loading="lazy"><figcaption>Страница 2 из 6</figcaption></figure><figure class="page"><img src="files/srez-poslednih/p3.png" alt="Виртуальная таблица СрезПоследних, страница 3" loading="lazy"><figcaption>Страница 3 из 6</figcaption></figure><figure class="page"><img src="files/srez-poslednih/p4.png" alt="Виртуальная таблица СрезПоследних, страница 4" loading="lazy"><figcaption>Страница 4 из 6</figcaption></figure><figure class="page"><img src="files/srez-poslednih/p5.png" alt="Виртуальная таблица СрезПоследних, страница 5" loading="lazy"><figcaption>Страница 5 из 6</figcaption></figure><figure class="page"><img src="files/srez-poslednih/p6.png" alt="Виртуальная таблица СрезПоследних, страница 6" loading="lazy"><figcaption>Страница 6 из 6</figcaption></figure></div></div>
+
+<pre><code class="language-bsl">ВЫБРАТЬ
+    Цены.Товар КАК Товар,
+    Цены.Цена КАК Цена
+ИЗ
+    РегистрСведений.ЦеныТоваров.СрезПоследних(&amp;Дата, ) КАК Цены
+
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Дата</th>
+<th>Цена мыши</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10-е</td>
+<td>500</td>
+</tr>
+<tr>
+<td>15-е</td>
+<td>550 — запись на эту дату <strong>включается</strong></td>
+</tr>
+<tr>
+<td>20-е</td>
+<td>550</td>
+</tr>
+</tbody>
+</table>
+<p>У среза граница включается, у остатков — нет. Это нужно просто запомнить.</p>
+<p><code>СрезПервых</code> — наоборот, первое значение после даты. Встречается редко.</p>
+<p>Условие — вторым параметром, как у остатков: <code>СрезПоследних(&amp;Дата, Товар В (&amp;Товары))</code>.</p>
+<h3 id="типичный-запрос-товар-остаток-цена">Типичный запрос: товар, остаток, цена</h3>
+<pre><code class="language-bsl">ВЫБРАТЬ
+    Товары.Ссылка КАК Товар,
+    ЕСТЬNULL(Остатки.КоличествоОстаток, 0) КАК Остаток,
+    ЕСТЬNULL(Цены.Цена, 0) КАК Цена
+ИЗ
+    Справочник.Товары КАК Товары
+        ЛЕВОЕ СОЕДИНЕНИЕ РегистрНакопления.ОстаткиТоваров.Остатки(&amp;Дата, ) КАК Остатки
+        ПО Товары.Ссылка = Остатки.Товар
+        ЛЕВОЕ СОЕДИНЕНИЕ РегистрСведений.ЦеныТоваров.СрезПоследних(&amp;Дата, ) КАК Цены
+        ПО Товары.Ссылка = Цены.Товар
+
+</code></pre>
+<p>Тут всё из задачи 3.2: главная таблица — справочник, к ней левыми соединениями — остатки и цены, <code>ЕСТЬNULL</code> для товаров без остатка или без цены.</p>
+</section>
+
+<section class="sec">
+<h2 id="6-в-конструкторе">6. В конструкторе</h2>
+<h3 id="регистры-в-дереве">Регистры в дереве</h3>
+<p>Открой конструктор запроса в любой серверной процедуре Песочницы. На «Таблицах и полях», в левой колонке, раскрой «Регистры сведений» и «Регистры накопления»:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/15_registry_v_dereve.png" alt="Регистры в дереве конструктора" loading="lazy"><figcaption>Регистры в дереве конструктора</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Физическая таблица регистра сведений — все записи цен</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Виртуальные таблицы цен: срез первых и срез последних</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Физическая таблица регистра накопления — все движения строками</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Виртуальные таблицы: обороты, остатки, остатки и обороты</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="физическая-таблица-не-для-остатков">Физическая таблица — не для остатков</h3>
+<p>Если перенести в среднюю колонку сам регистр, получишь физическую таблицу:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/16_fizicheskaya_tablica.png" alt="Физическая таблица регистра в запросе" loading="lazy"><figcaption>Физическая таблица регистра в запросе</figcaption></figure>
+
+<p>Убери её стрелкой ← обратно.</p>
+<h3 id="параметры-остатков">Параметры остатков</h3>
+<p>Перенеси в среднюю колонку <code>ОстаткиТоваров.Остатки</code>. Правый клик по ней → «Параметры виртуальной таблицы»:</p>
+<figure class="shot"><img src="img/3-3/17_parametry_ostatki.png" alt="Окно параметров таблицы «Остатки»" loading="lazy"><figcaption>Окно параметров таблицы «Остатки»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Виртуальная таблица остатков в средней колонке</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Ресурсы получили окончание «Остаток»: <code>КоличествоОстаток</code>, <code>СуммаОстаток</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Период — впиши параметр <code>&amp;Дата</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Условие на измерения — сюда, а не в <code>ГДЕ</code>. Кнопка «…» открывает окно выражения</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="остатки-и-срез-в-запросе">Остатки и срез в запросе</h3>
+<p>Перенеси ещё <code>ЦеныТоваров.СрезПоследних</code>:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/18_polya_ostatki_i_srez.png" alt="Остатки и срез последних в средней колонке" loading="lazy"><figcaption>Остатки и срез последних в средней колонке</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Остатки: измерение <code>Товар</code> и ресурсы</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Срез последних: период записи, товар, цена</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Откуда взяли срез в левой колонке</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="поля-остатков-и-оборотов">Поля остатков и оборотов</h3>
+<p>Для сравнения перенеси <code>ОстаткиТоваров.ОстаткиИОбороты</code> и раскрой. Потом убери обратно:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/19_ostatki_i_oboroty.png" alt="Поля таблицы «ОстаткиИОбороты»" loading="lazy"><figcaption>Поля таблицы «ОстаткиИОбороты»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Поле</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>НачальныйОстаток</code> — остаток на начало периода</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>Приход</code> и <code>Расход</code> за период</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>КонечныйОстаток</code> — остаток на конец</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>Оборот</code> — приход минус расход</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="параметры-среза">Параметры среза</h3>
+<p>Правый клик по <code>ЦеныТоваровСрезПоследних</code> → «Параметры виртуальной таблицы»:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/20_parametry_srez.png" alt="Окно параметров таблицы «СрезПоследних»" loading="lazy"><figcaption>Окно параметров таблицы «СрезПоследних»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Таблица среза в средней колонке</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Период — тот же параметр <code>&amp;Дата</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Условие — по желанию, как у остатков</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="поля-запроса-товар-остаток-цена">Поля запроса «товар, остаток, цена»</h3>
+<p>Перенеси справочник <code>Товары</code>. В правую колонку — <code>Ссылка</code> из «Товаров», <code>КоличествоОстаток</code> из остатков, <code>Цена</code> из среза:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/21_polya_zaprosa.png" alt="Три таблицы и поля запроса" loading="lazy"><figcaption>Три таблицы и поля запроса</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Остатки на дату</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Справочник — главная таблица: в результате будут все товары</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Цены на дату</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Поля результата</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="связи-сначала-ошибка">Связи: сначала ошибка</h3>
+<p>Вкладка «Связи». Конструктор сам поставил левые соединения, но условие — <code>ИСТИНА</code>:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/22_svyazi_oshibka.png" alt="Связи без условия — так нельзя" loading="lazy"><figcaption>Связи без условия — так нельзя</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Главная таблица — справочник</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>ИСТИНА</code> — условия нет. Каждый товар соединится с каждой строкой остатков</td>
+</tr>
+<tr>
+<td>3</td>
+<td>То же для цен</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Левые соединения — это правильно</td>
+</tr>
+</tbody>
+</table></div>
+<p>В тексте запроса это выглядит так:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/23_tekst_oshibka.png" alt="Текст запроса с ПО ИСТИНА" loading="lazy"><figcaption>Текст запроса с ПО ИСТИНА</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>ПО ИСТИНА</code> — соединение «каждая строка с каждой». Ловушка 3 из задачи 3.2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>То же для цен</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="связи-правильно">Связи: правильно</h3>
+<p>Двойной клик по <code>ИСТИНА</code> → в окне выражения пиши условие по товару:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/24_svyazi_pravilno.png" alt="Связи с условиями по товару" loading="lazy"><figcaption>Связи с условиями по товару</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Главная таблица</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>Товары.Ссылка = ОстаткиТоваровОстатки.Товар</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>Товары.Ссылка = ЦеныТоваровСрезПоследних.Товар</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Оба соединения левые</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="готовый-текст">Готовый текст</h3>
+<p>Кнопка «Запрос»:</p>
+<div class="shot-block"><figure class="shot"><img src="img/3-3/25_tekst_zaprosa.png" alt="Текст запроса «товар, остаток, цена»" loading="lazy"><figcaption>Текст запроса «товар, остаток, цена»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Блок</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Поля: товар, остаток, цена</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Справочник — главная таблица</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Остатки на дату и условие связи</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Цены на дату и условие связи</td>
+</tr>
+</tbody>
+</table></div>
+<p>Конструктор не обернул поля в <code>ЕСТЬNULL</code> — у товаров без остатка или цены будет <code>NULL</code>. Допиши руками.</p>
+</section>
+
+<section class="sec">
+<h2 id="7-ловушки">7. Ловушки</h2>
+<ol>
+<li><strong>Условие в</strong> <code>ГДЕ</code> <strong>вместо параметра.</strong> Результат тот же, скорость — в разы хуже. Условие на измерения — в параметр виртуальной таблицы.</li>
+<li><strong>Дата без</strong> <code>КонецДня</code><strong>.</strong> Остатки на дату не включают движения этой даты. Обороты по <code>&amp;Конец</code> без времени потеряют последний день.</li>
+<li><strong>Документ записан, но не проведён.</strong> Движений нет — в регистре пусто.</li>
+<li><strong>Нулевых остатков в</strong> <code>Остатки</code> <strong>нет.</strong> Нужны все товары — левое соединение от справочника и <code>ЕСТЬNULL</code>.</li>
+<li><strong>Псевдоним в условии параметра.</strong> Внутри скобок — <code>Товар</code>, не <code>Остатки.Товар</code>.</li>
+<li><code>Оборот</code> <strong>у регистра остатков — это приход минус расход,</strong> а не сумма движений.</li>
+</ol>
+</section>
+
+<section class="sec">
+<h2 id="8-практика-а-3060-минут">8. Практика А (30–60 минут)</h2>
+<p><strong>А1. Остатки на дату и граница</strong></p>
+<p>Процедура <code>&amp;НаСервере</code> в области <code>Задания</code> Песочницы.</p>
+<ol>
+<li>Запрос остатков всех товаров на 15-е число. Выведи товар и количество.</li>
+<li>Запусти дважды: с датой <code>15.xx 00:00:00</code> и с <code>КонецДня</code> той же даты.</li>
+<li>Сравни остаток мыши. Сколько получилось в каждом случае и почему? Ответ — комментарием в коде.</li>
+<li>Добавь условие «только мышь» — в параметр виртуальной таблицы, не в <code>ГДЕ</code>.</li>
+</ol>
+<p>Подсказки:</p>
+<ul>
+<li>Какой виртуальной таблицей отвечают на вопрос «сколько на дату»?</li>
+<li>Какие движения у мыши до 15-го и какое в сам день 15-го? Посчитай руками, прежде чем запускать.</li>
+<li>Товар в условии — тоже параметр запроса, не вклеивай ссылку.</li>
+</ul>
+</section>
+
+<section class="sec">
+<h2 id="9-практика-б-проект">9. Практика Б — проект</h2>
+<h3 id="б1-товары-на-дату"><strong>Б1. Товары на дату</strong></h3>
+<p>В модуле менеджера справочника «Товары» функция <code>ДанныеНаДату(Дата)</code>. Таблица значений:</p>
+<table>
+<thead>
+<tr>
+<th>Колонка</th>
+<th>Что</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Товар</code></td>
+<td>Ссылка</td>
+</tr>
+<tr>
+<td><code>Остаток</code></td>
+<td>Количество на конец дня <code>Дата</code></td>
+</tr>
+<tr>
+<td><code>Цена</code></td>
+<td>Цена, действовавшая на эту дату</td>
+</tr>
+<tr>
+<td><code>Стоимость</code></td>
+<td>Остаток × Цена</td>
+</tr>
+</tbody>
+</table>
+<p>Требования:</p>
+<ul>
+<li>все товары без пометки удаления, даже без остатка и без цены — там нули;</li>
+<li>остаток — на <strong>конец</strong> дня;</li>
+<li><code>Стоимость</code> считается в запросе;</li>
+<li>сортировка по стоимости, от большей к меньшей.</li>
+</ul>
+<p>Подсказки:</p>
+<ul>
+<li>Сколько таблиц в запросе и какая главная?</li>
+<li>Где превратить переданную дату в конец дня — в запросе или при установке параметра?</li>
+<li>Можно ли умножить два поля прямо в <code>ВЫБРАТЬ</code>? А если одно из них <code>NULL</code>?</li>
+<li>Нужна ли разная дата для остатков и для среза цен?</li>
+</ul>
+<h3 id="б2-ведомость-по-товарам"><strong>Б2. Ведомость по товарам</strong></h3>
+<p><strong>Что делает функция:</strong> ведомость по товарам за период — сколько каждого товара было на начало, сколько пришло, сколько ушло и сколько стало.</p>
+<p><strong>Где:</strong> модуль менеджера регистра накопления <code>ОстаткиТоваров</code>. Открывается как у справочника: правый клик по регистру в навигаторе → «Открыть модуль менеджера». Оформление — обёртка <code>#Если Сервер Или ТолстыйКлиентОбычноеПриложение Или ВнешнееСоединение Тогда</code> без <code>#Иначе</code> и область <code>ПрограммныйИнтерфейс</code>, как в модулях менеджеров из задачи 4 главы 2.</p>
+<p><strong>Функция:</strong> <code>Ведомость(Начало, Конец)</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Тип</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Начало</code></td>
+<td>Дата</td>
+<td>С какой даты</td>
+</tr>
+<tr>
+<td><code>Конец</code></td>
+<td>Дата</td>
+<td>По какую дату, включительно</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Возвращает таблицу значений:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Колонка</th>
+<th>Тип</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Товар</code></td>
+<td>СправочникСсылка.Товары</td>
+<td>Товар</td>
+</tr>
+<tr>
+<td><code>НачальныйОстаток</code></td>
+<td>Число</td>
+<td>Сколько было на начало периода</td>
+</tr>
+<tr>
+<td><code>Приход</code></td>
+<td>Число</td>
+<td>Сколько пришло за период</td>
+</tr>
+<tr>
+<td><code>Расход</code></td>
+<td>Число</td>
+<td>Сколько ушло за период</td>
+</tr>
+<tr>
+<td><code>КонечныйОстаток</code></td>
+<td>Число</td>
+<td>Сколько стало на конец периода</td>
+</tr>
+</tbody>
+</table>
+<p>Параметры <code>Начало</code> и <code>Конец</code> — это <strong>даты</strong>, а колонки <code>НачальныйОстаток</code> и <code>КонечныйОстаток</code> — <strong>количество</strong>. Не путай.</p>
+<p><strong>Проверка на данных из шага 6,</strong> период 10.10 — 20.10:</p>
+<table>
+<thead>
+<tr>
+<th>Товар</th>
+<th>Начальный</th>
+<th>Приход</th>
+<th>Расход</th>
+<th>Конечный</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Мышь</td>
+<td>20</td>
+<td>10</td>
+<td>8</td>
+<td>22</td>
+</tr>
+<tr>
+<td>Ноутбук</td>
+<td>5</td>
+<td>0</td>
+<td>2</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<p>Подсказки:</p>
+<ul>
+<li>Одна виртуальная таблица даёт все четыре числа. Какая?</li>
+<li>Какие у неё параметры по порядку и сколько запятых нужно для пустых?</li>
+<li>Что сделать с концом периода, чтобы движения последнего дня попали в расчёт?</li>
+<li>Все товары справочника здесь не нужны — только те, у кого был остаток или движения. Нужно ли соединение со справочником и <code>ЕСТЬNULL</code>?</li>
+<li>Сортировка — по товару, чтобы ведомость читалась.</li>
+<li>Описание функции — по стандарту: что делает, параметры, возвращаемое значение с полями <code>* Имя - Тип - описание</code>.</li>
+</ul>
+<h3 id="б3-тесты-процедура-тестывиртуальныхтаблиц-в-области-тесты-период-текущий-день"><strong>Б3. Тесты</strong> — процедура <code>ТестыВиртуальныхТаблиц()</code> в области <code>Тесты</code>. Период — текущий день.</h3>
+<p>Подготовка в коде: товары «Тест 3.3» и «Тест 3.3 пустой». Приход «Тест 3.3» × 5, расход × 2 — оба <strong>проведены</strong>. Цена «Тест 3.3» на сегодня — 100. Как провести документ и записать цену кодом — в справочнике.</p>
+<table>
+<thead>
+<tr>
+<th>Проверка</th>
+<th>Ожидается</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ДанныеНаДату</code>: остаток «Тест 3.3»</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Цена и стоимость «Тест 3.3»</td>
+<td>100 и 300</td>
+</tr>
+<tr>
+<td>«Тест 3.3 пустой» в результате с нулями</td>
+<td>Истина</td>
+</tr>
+<tr>
+<td><code>ДанныеНаДату</code> на вчера: остаток «Тест 3.3»</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>Ведомость</code>: приход и расход «Тест 3.3»</td>
+<td>5 и 2</td>
+</tr>
+<tr>
+<td>Для каждой строки ведомости: начало + приход − расход = конец</td>
+<td>Истина</td>
+</tr>
+</tbody>
+</table>
+<p>В конце: распроведи и пометь на удаление тестовые документы, пометь товары. Запись цены удали.</p>
+<p><strong>Коммиты:</strong></p>
+<ul>
+<li><code>Регистры остатков и цен, движения документов</code></li>
+<li><code>Данные товаров на дату, ведомость и тесты</code></li>
+</ul>
+<p>На ревью — тексты запросов и скриншот тестов.</p>
+</section>
+
+<section class="sec">
+<h2 id="10-справочник">10. Справочник</h2>
+<h3 id="виртуальные-таблицы-и-параметры">Виртуальные таблицы и параметры</h3>
+<table>
+<thead>
+<tr>
+<th>Таблица</th>
+<th>Параметры по порядку</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Остатки</code></td>
+<td>Период, Условие</td>
+</tr>
+<tr>
+<td><code>Обороты</code></td>
+<td>Начало, Конец, Периодичность, Условие</td>
+</tr>
+<tr>
+<td><code>ОстаткиИОбороты</code></td>
+<td>Начало, Конец, Периодичность, МетодДополнения, Условие</td>
+</tr>
+<tr>
+<td><code>СрезПоследних</code> / <code>СрезПервых</code></td>
+<td>Период, Условие</td>
+</tr>
+</tbody>
+</table>
+<h3 id="поля">Поля</h3>
+<table>
+<thead>
+<tr>
+<th>Таблица</th>
+<th>Поля ресурса <code>Количество</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Остатки</code></td>
+<td><code>КоличествоОстаток</code></td>
+</tr>
+<tr>
+<td><code>Обороты</code></td>
+<td><code>КоличествоПриход</code>, <code>КоличествоРасход</code>, <code>КоличествоОборот</code></td>
+</tr>
+<tr>
+<td><code>ОстаткиИОбороты</code></td>
+<td><code>КоличествоНачальныйОстаток</code>, <code>КоличествоПриход</code>, <code>КоличествоРасход</code>, <code>КоличествоОборот</code>, <code>КоличествоКонечныйОстаток</code></td>
+</tr>
+</tbody>
+</table>
+<p>У регистра накопления вида «Обороты» нет <code>Остатки</code>, а у <code>Обороты</code> нет приходов и расходов — только <code>Оборот</code>.</p>
+<h3 id="провести-документ-кодом">Провести документ кодом</h3>
+<pre><code class="language-bsl">ДокументОбъект.Записать(РежимЗаписиДокумента.Проведение);
+// отменить проведение:
+ДокументОбъект.Записать(РежимЗаписиДокумента.ОтменаПроведения);
+
+</code></pre>
+<h3 id="записать-значение-в-регистр-сведений-кодом">Записать значение в регистр сведений кодом</h3>
+<pre><code class="language-bsl">Запись = РегистрыСведений.ЦеныТоваров.СоздатьМенеджерЗаписи();
+Запись.Период = НачалоДня(ТекущаяДатаСеанса());
+Запись.Товар = Товар;
+Запись.Цена = 100;
+Запись.Записать();
+// удалить ту же запись: заполнить Период и Товар, затем
+Запись.Удалить();
+
+</code></pre>
+<h3 id="граница">Граница</h3>
+<pre><code class="language-bsl">Запрос.УстановитьПараметр(&quot;Дата&quot;, Новый Граница(Дата, ВидГраницы.Включая));
+
+</code></pre>
+<p>Альтернатива <code>КонецДня</code>: включает движения ровно в момент <code>Дата</code>. Удобно, когда нужны остатки на момент конкретного документа.</p>
+<h3 id="проверь-себя">Проверь себя</h3>
+<table>
+<thead>
+<tr>
+<th>Вопрос</th>
+<th>Ответ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Чем физическая таблица регистра отличается от виртуальной?</td>
+<td>Физическая — все движения строками, виртуальная — готовый расчёт платформы на дату или за период</td>
+</tr>
+<tr>
+<td>Включаются ли движения в момент <code>Дата</code> в <code>Остатки(&amp;Дата)</code>?</td>
+<td>Нет. Нужен <code>КонецДня</code> или <code>Граница</code></td>
+</tr>
+<tr>
+<td>А в <code>СрезПоследних(&amp;Дата)</code>?</td>
+<td>Да, запись на эту дату включается</td>
+</tr>
+<tr>
+<td>Почему условие пишут в параметр, а не в <code>ГДЕ</code>?</td>
+<td>Параметр ограничивает расчёт, <code>ГДЕ</code> отбрасывает строки уже после расчёта по всем данным</td>
+</tr>
+<tr>
+<td>Почему товара нет в <code>Остатки</code>?</td>
+<td>Остаток нулевой — таких строк в таблице нет</td>
+</tr>
+<tr>
+<td>Что значит <code>КоличествоОборот</code> у регистра остатков?</td>
+<td>Приход минус расход</td>
+</tr>
+<tr>
+<td>Чем регистр сведений отличается от регистра накопления?</td>
+<td>Сведений — значения на дату, накопления — движения, которые складываются в остатки</td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>выаываы</li>
+<li>ывааываыв</li>
+<li>ываываыв</li>
+<li>аываыва</li>
+<li>ываываыв</li>
+</ol>
+</section>
+    </article>
+    <footer class="note-foot"></footer>
+  </main>
+</div>
+<script src="../assets/plan.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>
