@@ -208,22 +208,25 @@
     st.appendChild(el("p", { class: "bar-legend", text: "Каждая клетка — задача плана, промежутки — границы глав." }));
 
     root.innerHTML = "";
-    P.stages.forEach(function (s) {
-      var sec = el("section", { class: "stage" });
+    P.stages.forEach(function (s, si) {
+      var stFolded = !!fold.st[si];
+      var sec = el("section", { class: "stage" + (stFolded ? " folded" : ""), "data-st": si });
+      var stBody = el("div", { class: "stage-body" + (stFolded ? " gone" : ""), id: "stage-body-" + si });
       sec.appendChild(el("header", { class: "stage-head" }, [
-        el("h2", { text: s.title }),
+        el("h2", {}, [foldBtn(s.title, stBody.id, !stFolded, function () { foldStage(si, !sec.classList.contains("folded"), true); })]),
         el("p", { class: "dates", text: s.dates }),
         el("p", { class: "goal", text: s.goal })
       ]));
       s.chapters.forEach(function (c) {
         var n = c.tasks.filter(function (t) { return isDone(t.id); }).length;
-        var art = el("article", { class: "chapter" + (n === c.tasks.length ? " all-done" : ""), id: "ch" + c.n, "data-ch": c.n });
+        var chFolded = !!fold.ch[c.n];
+        var art = el("article", { class: "chapter" + (n === c.tasks.length ? " all-done" : "") + (chFolded ? " folded" : ""), id: "ch" + c.n, "data-ch": c.n });
         art.appendChild(el("div", { class: "ch-num", text: c.n }));
         art.appendChild(el("div", { class: "ch-head" }, [
-          el("h3", { text: c.title }),
+          el("h3", {}, [foldBtn(c.title, "ch-tasks-" + c.n, !chFolded, function () { foldChapter(c.n, !art.classList.contains("folded"), true); })]),
           el("span", { class: "ch-meta", text: [c.dates, n + " из " + c.tasks.length].filter(Boolean).join(" · ") })
         ]));
-        var ol = el("ol", { class: "tasks" });
+        var ol = el("ol", { class: "tasks" + (chFolded ? " gone" : ""), id: "ch-tasks-" + c.n });
         c.tasks.forEach(function (t) {
           var cls = "task" + (isDone(t.id) ? " is-done" : "") + (t.id === P.current ? " is-current" : "");
           var cb = el("input", { type: "checkbox", "aria-label": "Пройдено: " + t.id });
@@ -241,10 +244,29 @@
           ]));
         });
         art.appendChild(ol);
-        sec.appendChild(art);
+        stBody.appendChild(art);
       });
+      sec.appendChild(stBody);
       root.appendChild(sec);
     });
+    foldAllLabel();
+    var foldAll = document.getElementById("fold-all");
+    if (foldAll && !foldAll.dataset.bound) {
+      foldAll.dataset.bound = 1;
+      foldAll.onclick = function () {
+        var fold1 = !allFolded();
+        chapters.forEach(function (c) { foldChapter(c.n, fold1, true); });
+        if (!fold1) P.stages.forEach(function (s, si) { foldStage(si, false, true); });
+      };
+    }
+    // Переход по ссылке «Глава N» из крошек: глава и её этап раскрыты
+    var m = /^#ch(\d+)$/.exec(location.hash);
+    if (m && document.getElementById("ch" + m[1])) {
+      var art0 = document.getElementById("ch" + m[1]);
+      foldStage(+art0.closest(".stage").getAttribute("data-st"), false, false);
+      foldChapter(+m[1], false, false);
+      art0.scrollIntoView();
+    }
 
     var hide = document.getElementById("hide-done");
     if (hide && !hide.dataset.bound) {
@@ -265,6 +287,41 @@
         refreshHome(true);
       };
     }
+  }
+
+  /* Свёрнутые главы и этапы: { ch: {номер: true}, st: {индекс: true} } */
+  var fold = (function () {
+    try { var f = JSON.parse(get("c1.fold")); if (f && f.ch && f.st) return f; } catch (e) {}
+    return { ch: {}, st: {} };
+  })();
+  var CHEV = '<svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>';
+  function foldBtn(text, controls, expanded, onclick) {
+    var b = el("button", { type: "button", class: "fold-btn", "aria-expanded": String(expanded), "aria-controls": controls, html: CHEV });
+    b.appendChild(el("span", { text: text }));
+    b.onclick = onclick;
+    return b;
+  }
+  function saveFold() { set("c1.fold", JSON.stringify(fold)); }
+  function foldChapter(n, folded, animate) {
+    var art = document.querySelector('#plan [data-ch="' + n + '"]'); if (!art) return;
+    art.classList.toggle("folded", folded);
+    art.querySelector(".ch-head .fold-btn").setAttribute("aria-expanded", String(!folded));
+    setShown(art.querySelector(".tasks"), !folded, animate);
+    if (folded) fold.ch[n] = true; else delete fold.ch[n];
+    saveFold(); foldAllLabel();
+  }
+  function foldStage(i, folded, animate) {
+    var sec = document.querySelector('#plan [data-st="' + i + '"]'); if (!sec) return;
+    sec.classList.toggle("folded", folded);
+    sec.querySelector(".stage-head .fold-btn").setAttribute("aria-expanded", String(!folded));
+    setShown(sec.querySelector(".stage-body"), !folded, animate);
+    if (folded) fold.st[i] = true; else delete fold.st[i];
+    saveFold(); foldAllLabel();
+  }
+  function allFolded() { return chapters.every(function (c) { return fold.ch[c.n]; }); }
+  function foldAllLabel() {
+    var b = document.getElementById("fold-all");
+    if (b) b.textContent = allFolded() ? "Развернуть всё" : "Свернуть всё";
   }
 
   var homeFacts = [], hideDone = false;
@@ -290,7 +347,7 @@
   }
   // Плавно свернуть или развернуть элемент списка
   function setShown(node, shown, animate) {
-    if (node._anim) { node._anim.cancel(); node._anim = null; }
+    if (node._anim) { var old = node._anim; node._anim = null; old.cancel(); }
     var hidden = node.classList.contains("gone");
     if (shown === !hidden) return;
     if (!animate || REDUCED.matches || !node.animate) { node.classList.toggle("gone", !shown); return; }
@@ -300,7 +357,12 @@
     var zero = { height: "0px", opacity: 0, paddingTop: "0px", paddingBottom: "0px", marginTop: "0px" };
     node.style.overflow = "hidden";
     var a = node._anim = node.animate(shown ? [zero, full] : [full, zero], { duration: DUR, easing: EASE });
-    a.onfinish = function () { node.style.overflow = ""; node._anim = null; if (!shown) node.classList.add("gone"); };
+    var finish = function () {
+      if (node._anim !== a) return;
+      a.cancel(); node.style.overflow = ""; node._anim = null; if (!shown) node.classList.add("gone");
+    };
+    a.onfinish = finish;
+    setTimeout(finish, DUR + 100);
   }
   function applyHide(animate) {
     var root = document.getElementById("plan"); if (!root) return;

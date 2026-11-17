@@ -83,6 +83,12 @@ span.t-title { color: var(--muted); }
 .task.is-current .t-title { background: var(--mark); color: var(--on-mark); padding: 0 4px; margin-left: -4px; font-weight: 700; }
 .badge-now { font: 700 12px/1 var(--f-ui); padding: 4px 6px; background: var(--on-mark); color: var(--mark); margin-left: 8px; vertical-align: 2px; }
 .gone { display: none !important; }
+/* Сворачивание глав и этапов на главной */
+.stage-body { grid-column: 1 / -1; }
+.fold-btn { display: inline-flex; align-items: baseline; gap: .35em; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; cursor: pointer; }
+.fold-btn:hover span { text-decoration: underline; text-underline-offset: .18em; text-decoration-thickness: 2px; }
+.fold-btn .chev { flex: none; width: .8em; height: .8em; align-self: center; transition: transform var(--t); }
+.chapter.folded .ch-head .chev, .stage.folded .stage-head .chev { transform: rotate(-90deg); }
 
 /* ===== Конспект: каркас ===== */
 .layout { display: grid; grid-template-columns: var(--toc-w) minmax(0, 1fr); gap: 0 48px; max-width: 1280px; margin: 0 auto; padding: 0 16px; }
