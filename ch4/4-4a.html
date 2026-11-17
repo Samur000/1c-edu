@@ -1,0 +1,1240 @@
+<!doctype html>
+<html lang="ru" data-root="../" data-task="4.4а">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4.4а Внешний отчёт без БСП · Конспекты 1С</title>
+<script src="../assets/boot.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body class="page-note">
+<div id="topbar"></div>
+<div class="layout">
+  <aside id="toc" aria-label="Содержание"></aside>
+  <main class="note">
+    <header class="note-head">
+      <nav class="crumbs" aria-label="Вы здесь"></nav>
+      <h1>4.4а Внешний отчёт без БСП</h1>
+      <div class="note-meta"><strong>Цель:</strong> сделать отчёт, который живёт отдельным файлом <code>.erf</code>, а не внутри конфигурации: схема на СКД, таблица и диаграмма. Собрать файл и открыть его в предприятии.
+<strong>Время:</strong> 1 день. Застрял больше 30 минут — пиши.
+<strong>Git:</strong> ветка <code>feature/ch4-t4a-vneshniy-otchet</code>.</div>
+    </header>
+    <article class="note-body">
+<section class="sec">
+<h2 id="0-словарь">0. Словарь</h2>
+<table>
+<thead>
+<tr>
+<th>Слово</th>
+<th>Простыми словами</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Внешний отчёт</strong></td>
+<td>Отчёт в отдельном файле. В конфигурацию не входит, открывается в любой базе с подходящей конфигурацией</td>
+</tr>
+<tr>
+<td><strong><code>.erf</code></strong></td>
+<td>Файл внешнего отчёта (External Report File). У внешней обработки — <code>.epf</code></td>
+</tr>
+<tr>
+<td><strong>Проект внешнего отчёта</strong></td>
+<td>В EDT каждый внешний отчёт — отдельный проект. Один проект — один отчёт</td>
+</tr>
+<tr>
+<td><strong>Базовый проект</strong></td>
+<td>Конфигурация, к которой привязан внешний отчёт. От неё берутся справочники, документы и регистры для запроса</td>
+</tr>
+<tr>
+<td><strong>Выгрузка в XML</strong></td>
+<td>EDT сохраняет отчёт в виде папки с XML-файлами. Это исходники, а не готовый <code>.erf</code></td>
+</tr>
+<tr>
+<td><strong>Сборка</strong></td>
+<td>Превращение XML-файлов в один файл <code>.erf</code>. Делает платформа 1С, а не EDT</td>
+</tr>
+<tr>
+<td><strong>Пакетный режим</strong></td>
+<td>Запуск 1С без окон: команда «сделай и закройся». Так работает наш скрипт сборки</td>
+</tr>
+<tr>
+<td><strong>Скрипт</strong></td>
+<td>Файл с командами для Mac. Двойной клик — и команды выполняются по очереди</td>
+</tr>
+<tr>
+<td><strong>Диаграмма</strong></td>
+<td>Элемент структуры отчёта СКД, рядом с группировками. Рисует данные картинкой</td>
+</tr>
+<tr>
+<td><strong>Точки</strong></td>
+<td>Что откладывается по горизонтали. У нас — товары: столбик на каждый товар</td>
+</tr>
+<tr>
+<td><strong>Серии</strong></td>
+<td>Разбивка внутри точки: несколько столбиков разного цвета. У нас не используем, столбик один — <code>Сумма</code></td>
+</tr>
+<tr>
+<td><strong>Тип диаграммы</strong></td>
+<td>Гистограмма, круговая, график и т. д. Задаётся в «Других настройках»</td>
+</tr>
+<tr>
+<td><strong>Транслит</strong></td>
+<td>Русские буквы, записанные латиницей: <code>ПриходыПоТоварам</code> → <code>PrihodyPoTovaram</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section class="sec">
+<h2 id="1-что-это-зачем-где-найти">1. Что это, зачем, где найти</h2>
+<h3 id="какую-проблему-решаем">Какую проблему решаем</h3>
+<p>Клиенту нужен новый отчёт. У него типовая ЗГУ или БГУ, она <strong>на поддержке</strong>: фирма 1С выпускает обновления, и франчайзи их ставит. Если добавить отчёт прямо в конфигурацию:
+- конфигурацию придётся <strong>снять с поддержки</strong> или включить возможность изменений;
+- каждое обновление станет дольше и дороже: надо сравнивать и объединять изменения;
+- ошибка в отчёте — это правка конфигурации и обновление базы.</p>
+<p><strong>Решение — внешний отчёт.</strong> Отчёт лежит отдельным файлом. Конфигурацию не трогаем. Исправили — отдали новый файл.</p>
+<p>На практике во франчайзи большинство доработок для госсектора — внешние отчёты и обработки. Поэтому задача 🔥.</p>
+<h3 id="внешний-отчёт-или-отчёт-в-конфигурации">Внешний отчёт или отчёт в конфигурации</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Отчёт в конфигурации (4.1–4.3)</th>
+<th>Внешний отчёт (4.4а)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Где живёт</td>
+<td>Внутри конфигурации <code>Uchebnaya</code></td>
+<td>Отдельный файл <code>.erf</code></td>
+</tr>
+<tr>
+<td>Меняет конфигурацию</td>
+<td>Да</td>
+<td>Нет</td>
+</tr>
+<tr>
+<td>Как доставить клиенту</td>
+<td>Обновить конфигурацию базы</td>
+<td>Передать файл</td>
+</tr>
+<tr>
+<td>Как открыть</td>
+<td>Раздел в интерфейсе</td>
+<td>«Файл» → «Открыть» (4.4а) или через БСП (4.4б)</td>
+</tr>
+<tr>
+<td>Схема, запрос, настройки</td>
+<td>СКД</td>
+<td>Та же СКД, всё как в 4.1–4.3</td>
+</tr>
+</tbody>
+</table>
+<p>Главная мысль: <strong>внутри это такой же отчёт на СКД</strong>. Новое только в том, как его создать, собрать и открыть.</p>
+<h3 id="как-это-устроено-в-edt">Как это устроено в EDT</h3>
+<p>В Конфигураторе внешний отчёт создаётся сразу файлом <code>.erf</code>. В EDT иначе:</p>
+<ol>
+<li>Отчёт — это <strong>отдельный проект</strong> в EDT, привязанный к базовому проекту <code>Uchebnaya</code>.</li>
+<li>EDT умеет выгрузить его только в <strong>XML-файлы</strong> (исходники).</li>
+<li>Из XML файл <code>.erf</code> собирает <strong>платформа 1С</strong> в пакетном режиме.</li>
+<li>Готовый <code>.erf</code> открываешь в предприятии.</li>
+</ol>
+<p>Аналогия: XML — это рукопись книги по главам, <code>.erf</code> — переплетённая книга. Править удобно рукопись (и хранить её в Git), а читателю отдают книгу.</p>
+<h3 id="весь-путь-одной-схемой">Весь путь одной схемой</h3>
+<pre><code>EDT: проект ПриходыПоТоварам
+   │  правый клик → Экспорт → «Внешние обработки и отчеты»
+   ▼
+~/1C/ext/ExternalReports/ПриходыПоТоварам.xml  (+ папка)
+   │  двойной клик по ~/1C/build-erf.command
+   ▼
+~/1C/ext/build/PrihodyPoTovaram.erf
+   │  предприятие: «Файл» → «Открыть»
+   ▼
+Отчёт на экране
+</code></pre>
+</section>
+
+<section class="sec">
+<h2 id="2-как-сделать">2. Как сделать</h2>
+<h3 id="шаг-1-создать-проект-внешнего-отчёта">Шаг 1. Создать проект внешнего отчёта</h3>
+<p><strong>Что делаем.</strong> «Файл» → «Новый» → «Другое…».</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/01_menu_novyi.png" alt="Меню создания" loading="lazy"><figcaption>Меню создания</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>«Файл» → «Новый»</td>
+</tr>
+<tr>
+<td>2</td>
+<td>«Другое…» (<code>Cmd+N</code>) — открывает список всех мастеров создания</td>
+</tr>
+</tbody>
+</table></div>
+<p>Почему не «Проект…»: там общий мастер Eclipse. Проекты 1С лежат в отдельной папке мастеров.</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/02_master_instrument.png" alt="Окно «Выберите мастер»" loading="lazy"><figcaption>Окно «Выберите мастер»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Поле фильтра — сюда можно ввести часть названия</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Папка «Инструмент разработки 1С:Предприятие» — все мастера 1С</td>
+</tr>
+</tbody>
+</table></div>
+<p>Проще ввести в фильтр слово «Проект»:</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/03_proekt_vneshnego_otcheta.png" alt="Мастер «Проект внешнего отчета»" loading="lazy"><figcaption>Мастер «Проект внешнего отчета»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Фильтр «Проект»</td>
+</tr>
+<tr>
+<td>2</td>
+<td>«Проект внешнего отчета». Рядом — «Проект внешней обработки» (для <code>.epf</code>), «Проект конфигурации» и «Проект расширения». Выбираешь, жмёшь «Далее»</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Заполняем мастер.</strong></p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/04_master_zapolnen.png" alt="Мастер «Новый внешний отчет», заполнен правильно" loading="lazy"><figcaption>Мастер «Новый внешний отчет», заполнен правильно</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Имя</strong> <code>ПриходыПоТоварам</code> — имя самого отчёта. <strong>Синоним</strong> «Приходы по товарам» — его видит пользователь в заголовке формы</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Имя проекта</strong> — имя проекта в EDT и папки на диске. EDT подставляет его из имени отчёта. Оставляем так</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Базовый проект</strong> <code>Uchebnaya</code> — без него в запросе не будет наших документов и справочников</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Версия</strong> <code>8.3.27</code> — версия платформы, под которую собирается отчёт. Должна совпадать с твоей платформой</td>
+</tr>
+<tr>
+<td>5</td>
+<td>«Готово». Можно нажать «Далее» и посмотреть страницу стандартов</td>
+</tr>
+</tbody>
+</table></div>
+<p>Что значат поля:</p>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Что будет, если ошибиться</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Имя</td>
+<td>Отчёт будет называться не так. Переименовать можно, но проще пересоздать (ловушка 1)</td>
+</tr>
+<tr>
+<td>Имя проекта</td>
+<td>Только имя в EDT. На работу отчёта не влияет</td>
+</tr>
+<tr>
+<td>Базовый проект</td>
+<td>Пусто — отчёт «ни к чему не привязан», в запросе нет <code>ПриходТовара</code> (ловушка 2)</td>
+</tr>
+<tr>
+<td>Версия</td>
+<td>Выше твоей платформы — твоя 1С не сможет собрать и открыть отчёт (ловушка 2)</td>
+</tr>
+</tbody>
+</table>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/05_standarty.png" alt="Страница «1С:Стандарты разработки v8 – Параметры проекта» (кнопка «Далее»)" loading="lazy"><figcaption>Страница «1С:Стандарты разработки v8 – Параметры проекта» (кнопка «Далее»)</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Включены: проверки по стандартам 1С, общие проверки стиля кода, авто-сортировка объектов. Оставь — EDT будет подсказывать ошибки в коде</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Выключены: автоматическая структура модуля и аннотация strict-types. Для учебных отчётов не нужны, оставь как есть</td>
+</tr>
+</tbody>
+</table></div>
+<p>После «Готово» в навигаторе появляется новый проект.</p>
+
+<h3 id="шаг-2-создать-схему-компоновки-данных">Шаг 2. Создать схему компоновки данных</h3>
+<p><strong>Что делаем.</strong> В навигаторе раскрой проект <code>ПриходыПоТоварам</code> → «Отчеты» → <code>ПриходыПоТоварам</code>, двойной клик. Откроется редактор отчёта.</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/09_navigator.png" alt="Навигатор и редактор отчёта" loading="lazy"><figcaption>Навигатор и редактор отчёта</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Проект конфигурации <code>Uchebnaya</code> — базовый</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Проект внешнего отчёта <code>ПриходыПоТоварам</code>. Внутри одна ветка «Отчеты» и один отчёт. Других объектов (справочников, документов) нет — они берутся из базового проекта</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Поле «Основная схема компоновки данных». Пока пустое. Кнопка справа в поле создаёт схему — как в задаче 4.1</td>
+</tr>
+</tbody>
+</table></div>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/10_novyi_maket.png" alt="Окно «Новый макет»" loading="lazy"><figcaption>Окно «Новый макет»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Тип «Схема компоновки данных»</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Имя <code>ОсновнаяСхемаКомпоновкиДанных</code> — оставляем по умолчанию</td>
+</tr>
+</tbody>
+</table></div>
+<p>«Готово» → откроется редактор схемы. Дальше всё как в 4.1.</p>
+
+<h3 id="шаг-3-запрос">Шаг 3. Запрос</h3>
+<p><strong>Что делаем.</strong> «Наборы данных» → добавить «Набор данных – запрос» → «Конструктор запроса…».</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/11_konstruktor_dokumenty.png" alt="Конструктор видит документы базовой конфигурации" loading="lazy"><figcaption>Конструктор видит документы базовой конфигурации</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>«Документы» → <code>ПриходТовара</code>, <code>РасходТовара</code>. Это объекты <code>Uchebnaya</code>: внешний отчёт видит их через базовый проект</td>
+</tr>
+</tbody>
+</table></div>
+<p>Берём табличную часть <code>ПриходТовара.Товары</code>: поля <code>Товар</code>, <code>Количество</code>, <code>Сумма</code>. Условия — период и проведённость.</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/12_zapros.png" alt="Текст запроса" loading="lazy"><figcaption>Текст запроса</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Запрос: товары из приходов за период, только проведённые документы</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-bsl">ВЫБРАТЬ
+    ПриходТовараТовары.Товар КАК Товар,
+    ПриходТовараТовары.Количество КАК Количество,
+    ПриходТовараТовары.Сумма КАК Сумма
+ИЗ
+    Документ.ПриходТовара.Товары КАК ПриходТовараТовары
+ГДЕ
+    ПриходТовараТовары.Ссылка.Дата МЕЖДУ &amp;НачалоПериода И &amp;КонецПериода
+    И ПриходТовараТовары.Ссылка.Проведен
+</code></pre>
+<p>Почему <code>Ссылка.Проведен</code>: непроведённый документ — черновик. Если его не отсечь, отчёт покажет приход, которого на складе нет.</p>
+
+<h3 id="шаг-4-ресурсы-и-параметры">Шаг 4. Ресурсы и параметры</h3>
+<p><strong>Что делаем.</strong> Всё как в 4.1 и 4.2.</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/13_resursy.png" alt="Ресурсы" loading="lazy"><figcaption>Ресурсы</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Вкладка «Ресурсы»</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>Сумма(Количество)</code> и <code>Сумма(Сумма)</code>. Без ресурсов не будет итогов по товару и строки «Итого», а диаграмме нечего будет рисовать</td>
+</tr>
+</tbody>
+</table></div>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/14_parametry.png" alt="Параметры" loading="lazy"><figcaption>Параметры</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Вкладка «Параметры»</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Выражения: <code>&amp;Период.ДатаНачала</code> и <code>&amp;Период.ДатаОкончания</code>. Начало и конец берутся из параметра <code>Период</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>«Ограничение доступности» у <code>НачалоПериода</code> и <code>КонецПериода</code> — пользователь их не видит, он выбирает один <code>Период</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Параметр <code>Период</code> типа «Стандартный период» — добавлен вручную, как в 4.1</td>
+</tr>
+</tbody>
+</table></div>
+<p>Что будет без шага: пользователь увидит три поля дат вместо одного периода, или отчёт выдаст пусто, потому что даты не заданы.</p>
+
+<h3 id="шаг-5-таблица-уровень-отчет-и-уровень-группировки">Шаг 5. Таблица: уровень «Отчет» и уровень группировки</h3>
+<p><strong>Что делаем.</strong> «Настройки» → добавить группировку <code>Товар</code>. На уровне «Отчет» — выбранные поля и отбор по <code>Товар</code> с режимом «Быстрый доступ» (как в 4.3).</p>
+<p>Здесь важно понимать, <strong>на каком уровне ты стоишь</strong>. Нижняя часть «Настроек» меняется в зависимости от того, что выделено в дереве структуры. Подсказка — набор вкладок:</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/15_uroven_otchet.png" alt="Выделен корень «Отчет»" loading="lazy"><figcaption>Выделен корень «Отчет»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Есть вкладка «Параметры» → ты на уровне <strong>«Отчет»</strong>. Параметры бывают только у всего отчёта</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Выбранные поля отчёта: <code>Товар</code>, <code>Количество</code>, <code>Сумма</code></td>
+</tr>
+</tbody>
+</table></div>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/16_uroven_gruppirovka.png" alt="Выделена группировка «Товар»" loading="lazy"><figcaption>Выделена группировка «Товар»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Есть вкладка «Поля группировки» → ты на уровне <strong>группировки</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Выбранные поля <code>&lt;Авто&gt;</code> — группировка берёт поля с уровня «Отчет»</td>
+</tr>
+</tbody>
+</table></div>
+<table>
+<thead>
+<tr>
+<th>Признак</th>
+<th>Уровень</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Вкладка «Параметры»</td>
+<td>Отчет</td>
+</tr>
+<tr>
+<td>Вкладка «Поля группировки»</td>
+<td>Группировка</td>
+</tr>
+<tr>
+<td>Вкладки «Точки», «Серии» не видны, но в шапке «Диаграмма»</td>
+<td>Диаграмма</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Почему это важно:</strong> отбор и выбранные поля, заданные на уровне группировки, действуют <strong>только на неё</strong>. Диаграмма — отдельный элемент структуры, она их не увидит (ловушка 8). Всё общее ставим на уровень «Отчет».</p>
+
+<h3 id="шаг-6-диаграмма">Шаг 6. Диаграмма</h3>
+<p><strong>Что делаем.</strong> Выдели корень «Отчет» → кнопка добавления элемента структуры → «Новая диаграмма».</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/17_dobavit_diagrammu.png" alt="Диаграмма в структуре" loading="lazy"><figcaption>Диаграмма в структуре</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Кнопка добавления элемента структуры (со стрелкой — выбор: группировка, таблица, диаграмма)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Элемент «Диаграмма» рядом с группировкой <code>Товар</code>, у него две ветки: «Точки» и «Серии»</td>
+</tr>
+</tbody>
+</table></div>
+<p>Структура теперь такая:</p>
+<pre><code>Отчет
+ ├─ Товар           ← таблица: строка на товар + «Итого»
+ └─ Диаграмма       ← картинка по тем же данным
+     ├─ Точки → Товар
+     └─ Серии (пусто)
+</code></pre>
+<p><strong>Точки.</strong> Правый клик по «Точки» → «Новая группировка» → поле <code>Товар</code>.</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/18_tochki_tovar.png" alt="Группировка в точках" loading="lazy"><figcaption>Группировка в точках</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>«Точки» — то, что идёт по горизонтали</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Группировка <code>Товар</code>: на каждый товар — свой столбик</td>
+</tr>
+</tbody>
+</table></div>
+<table>
+<thead>
+<tr>
+<th>Куда поставить <code>Товар</code></th>
+<th>Что получится</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>В «Точки»</td>
+<td>По горизонтали Мышь и Ноутбук, по столбику на каждый</td>
+</tr>
+<tr>
+<td>В «Серии»</td>
+<td>Одна точка, внутри цветные столбики Мышь и Ноутбук с легендой по товарам</td>
+</tr>
+<tr>
+<td>Никуда</td>
+<td>Один столбик — общая сумма за период</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Что рисовать.</strong> Выдели «Диаграмма» → вкладка «Выбранные поля» → оставь только <code>Сумма</code>.</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/19_diagramma_polya.png" alt="Уровень «Диаграмма»" loading="lazy"><figcaption>Уровень «Диаграмма»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Шапка «Настройки: Отчет Диаграмма» — ты на уровне диаграммы</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Вкладки уровня диаграммы: «Выбранные поля», «Условное оформление», «Другие настройки»</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Выбранное поле — только <code>Сумма</code>. Это высота столбика</td>
+</tr>
+</tbody>
+</table></div>
+<p>Почему не <code>&lt;Авто&gt;</code>: тогда на диаграмму попадут и <code>Количество</code>, и <code>Сумма</code>. Шкала одна: 30 штук рядом с 300 000 рублей — столбики количества будут не видны, а легенда запутает.</p>
+<p><strong>Тип диаграммы.</strong> Выдели «Отчет» → «Другие настройки» → строка «Тип диаграммы» → галка → «Гистограмма».</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/20_tipy_diagramm.png" alt="Список типов" loading="lazy"><figcaption>Список типов</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>«Гистограмма» — вертикальные столбики. Выше: «График» (линия), ниже: варианты с накоплением, объёмные</td>
+</tr>
+</tbody>
+</table></div>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/21_tip_diagrammy_otchet.png" alt="«Тип диаграммы» на уровне «Отчет»" loading="lazy"><figcaption>«Тип диаграммы» на уровне «Отчет»</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Вкладка «Параметры» есть → уровень «Отчет». Открыты «Другие настройки»</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Строка «Тип диаграммы» = «Гистограмма», галка включена</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Почему на уровне «Отчет», а не диаграммы:</strong> настройка на уровне «Отчет» — значение по умолчанию для всех диаграмм отчёта. Работает и так, и так. Если поставить на уровне диаграммы — действует только на неё и перекрывает «Отчет». Галка слева обязательна: без неё строка серая и не применяется — будет тип по умолчанию.</p>
+<p>Сохрани (<code>Cmd+S</code>).</p>
+
+<h3 id="шаг-7-выгрузить-отчёт-в-xml">Шаг 7. Выгрузить отчёт в XML</h3>
+<p><strong>Что делаем.</strong> Правый клик по проекту <code>ПриходыПоТоварам</code> в навигаторе → «Экспорт…».</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/22_menu_eksport.png" alt="Контекстное меню проекта" loading="lazy"><figcaption>Контекстное меню проекта</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>«Экспорт…» — выгрузка в файлы</td>
+</tr>
+<tr>
+<td>2</td>
+<td>«Выполнить как» — <strong>не подходит</strong> для внешнего отчёта (шаг 8)</td>
+</tr>
+</tbody>
+</table></div>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/23_eksport_master.png" alt="Выбор мастера экспорта" loading="lazy"><figcaption>Выбор мастера экспорта</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Заголовок: «Экспорт внешних обработок и отчетов в <strong>XML-файлы</strong> платформы». Сразу видно: на выходе XML, не <code>.erf</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>«1C:Enterprise» → «Внешние обработки и отчеты». В фильтре достаточно набрать «внеш»</td>
+</tr>
+</tbody>
+</table></div>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/24_eksport_stranica.png" alt="Куда выгружать" loading="lazy"><figcaption>Куда выгружать</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>«В каталог». <strong>Указывай <code>/Users/&lt;ты&gt;/1C/ext</code>.</strong> На скрине старый путь <code>…/1C/Внешние</code> — с ним сборка падает: 1С на Mac не любит русские буквы в пути (ловушка 5)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Галка на отчёте <code>ПриходыПоТоварам</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>«Готово». Если файлы уже есть — EDT спросит про замену, соглашайся</td>
+</tr>
+</tbody>
+</table></div>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/25_finder_xml.png" alt="Что получилось на диске" loading="lazy"><figcaption>Что получилось на диске</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Папка <code>ExternalReports/ПриходыПоТоварам/</code> — макет (наша схема СКД) и его XML</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>ПриходыПоТоварам.xml</code> — корневой файл отчёта. По нему платформа собирает <code>.erf</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Это и есть исходники. Открыть их в предприятии нельзя.</p>
+
+<h3 id="шаг-8-почему-не-выполнить-как">Шаг 8. Почему не «Выполнить как»</h3>
+<p><strong>Что делаем.</strong> Ничего — это разбор, чтобы не тратить на это время.</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/26_vypolnit_kak.png" alt="«Выполнить как» у проекта внешнего отчёта" loading="lazy"><figcaption>«Выполнить как» у проекта внешнего отчёта</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>«Выполнить как»</td>
+</tr>
+<tr>
+<td>2</td>
+<td>«Тонкий клиент 1С:Предприятия»</td>
+</tr>
+</tbody>
+</table></div>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/27_predpriyatie_bez_otcheta.png" alt="Предприятие открылось, но отчёта нет" loading="lazy"><figcaption>Предприятие открылось, но отчёта нет</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Только разделы конфигурации: «Главное», «Товары». Внешнего отчёта нет</td>
+</tr>
+</tbody>
+</table></div>
+<p>Почему: «Выполнить как» запускает базу <strong>базового проекта</strong> <code>Uchebnaya_dev</code>. Внешний отчёт не часть конфигурации, в интерфейс он не попадает. Его нужно отдельно собрать в <code>.erf</code> и открыть.</p>
+
+<h3 id="шаг-9-собрать-erf-скриптом">Шаг 9. Собрать <code>.erf</code> скриптом</h3>
+<p><strong>Что делаем.</strong> Двойной клик по <code>~/1C/build-erf.command</code>. Откроется окно Терминала, в конце — «Собрано файлов: 1» и откроется папка с результатом. Окно закрыть клавишей <code>Enter</code>.</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/28_finder_build.png" alt="Папка ~/1C после сборки" loading="lazy"><figcaption>Папка <code>~/1C</code> после сборки</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>build-erf.command</code> — скрипт сборки. Запускаешь двойным кликом</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>ext/build/</code> — результат: <code>PrihodyPoTovaram.erf</code> и <code>log.txt</code> (журнал 1С)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>ext/ExternalReports/</code> — XML из шага 7, отсюда скрипт берёт исходники</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ниже, в корне <code>ext</code>, лежат <code>log.txt</code> и <code>PrihodyPoTovaram.erf</code> — остались от первой ручной сборки. Их можно удалить.</p>
+<p><strong>Что делает скрипт, по шагам:</strong></p>
+<ol>
+<li>Находит установленную платформу 1С (самую новую версию в <code>/Applications/1cv8.localized/</code>).</li>
+<li>Копирует файл базы <code>1Cv8.1CD</code> из <code>~/1C/bases/Uchebnaya_dev</code> во временную папку. Зачем: пока открыт EDT, база занята, и 1С отказывается к ней подключаться. С копией EDT можно не закрывать.</li>
+<li>Для каждого XML в <code>ext/ExternalReports</code> и <code>ext/ExternalDataProcessors</code>:</li>
+<li>переводит имя в транслит: <code>ПриходыПоТоварам</code> → <code>PrihodyPoTovaram</code>;</li>
+<li>запускает 1С в пакетном режиме: «загрузи отчёт из XML и сохрани как <code>.erf</code>»;</li>
+<li>проверяет, появился ли файл. Да — «готово», нет — показывает журнал 1С.</li>
+<li>Удаляет временную копию базы.</li>
+<li>Пишет, сколько файлов собрано, и открывает папку <code>build</code>.</li>
+</ol>
+<p><strong>Зачем 1С вообще нужна база:</strong> конфигуратор не запускается без базы. И отчёт ссылается на объекты конфигурации (<code>Справочник.Товары</code>, <code>Документ.ПриходТовара</code>) — значит, конфигурация базы должна их содержать.</p>
+<p>Главная строка скрипта — то, что раньше набирали в Терминале руками:</p>
+<pre><code class="language-bash">1cv8 DESIGNER /F &lt;база&gt; /LoadExternalDataProcessorOrReportFromFiles &lt;отчёт.xml&gt; &lt;отчёт.erf&gt; /Out &lt;журнал&gt;
+</code></pre>
+<p><strong>Если в Терминале видишь <code>Abort trap: 6</code> или <code>Segmentation fault</code>, а ниже «готово»</strong> — всё в порядке. 1С на Mac иногда падает при закрытии, уже после сохранения файла (ловушка 6). Смотри на слово «готово» и на файл в <code>build</code>.</p>
+<p><strong>Для другой базы</strong> (например, <code>ZGU_demo</code> в 4.4б) открой скрипт в «TextEdit» и поменяй одну строку в начале:</p>
+<pre><code class="language-bash">BASE=&quot;$HOME/1C/bases/Uchebnaya_dev&quot;
+</code></pre>
+<p>на путь к папке нужной базы.</p>
+<p><strong>Порядок работы теперь всегда такой:</strong></p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Где</th>
+<th>Что</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>EDT</td>
+<td>Правишь отчёт, <code>Cmd+S</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>EDT</td>
+<td>Правый клик по проекту → «Экспорт…» → <code>~/1C/ext</code>, заменить файлы</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Finder</td>
+<td>Двойной клик <code>~/1C/build-erf.command</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Предприятие</td>
+<td>«Файл» → «Открыть» → <code>~/1C/ext/build/….erf</code></td>
+</tr>
+</tbody>
+</table>
+<p>XML каждый раз создаётся заново шагом 2 — вручную их не трогаешь.</p>
+
+<h3 id="шаг-10-открыть-отчёт-в-предприятии">Шаг 10. Открыть отчёт в предприятии</h3>
+<p><strong>Что делаем.</strong> Запусти базу <code>Uchebnaya_dev</code> (из EDT через «Выполнить как» у проекта <code>Uchebnaya</code> или из стартера 1С). Меню (кнопка ☰ справа вверху) → «Файл» → «Открыть…» (<code>Cmd+O</code>) → <code>~/1C/ext/build/PrihodyPoTovaram.erf</code>.</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/29_fail_otkryt.png" alt="Главное меню" loading="lazy"><figcaption>Главное меню</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>«Файл»</td>
+</tr>
+<tr>
+<td>2</td>
+<td>«Открыть…» (<code>Cmd+O</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/30_preduprezhdenie.png" alt="Предупреждение безопасности" loading="lazy"><figcaption>Предупреждение безопасности</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Какой файл открывается и откуда</td>
+</tr>
+<tr>
+<td>2</td>
+<td>«Да» — открыть</td>
+</tr>
+</tbody>
+</table></div>
+<p>Почему спрашивает: внешний отчёт может содержать код, а код выполняется в базе. 1С предупреждает при каждом открытии файла через «Файл» → «Открыть». В рабочих базах внешние отчёты подключают через БСП (4.4б), там доступ контролирует администратор.</p>
+</section>
+
+<section class="sec">
+<h2 id="3-итоговый-вид">3. Итоговый вид</h2>
+<p>Период 01.07.2026 – 31.12.2026, «Сформировать».</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/31_otchet_polnyi.png" alt="Отчёт без отбора" loading="lazy"><figcaption>Отчёт без отбора</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Период — один параметр «Стандартный период». <code>НачалоПериода</code> и <code>КонецПериода</code> скрыты</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Таблица: группировка <code>Товар</code> и «Итого»</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Гистограмма: столбик на каждый товар, высота — <code>Сумма</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Легенда «Сумма» — одно выбранное поле, один цвет</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Проверка цифрами:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Товар</th>
+<th>Количество</th>
+<th>Сумма</th>
+<th>Цена = Сумма / Количество</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Мышь</td>
+<td>30</td>
+<td>16 500,00</td>
+<td>550</td>
+</tr>
+<tr>
+<td>Ноутбук</td>
+<td>5</td>
+<td>300 000,00</td>
+<td>60 000</td>
+</tr>
+<tr>
+<td><strong>Итого</strong></td>
+<td><strong>35</strong> = 30 + 5</td>
+<td><strong>316 500,00</strong> = 16 500 + 300 000</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>На диаграмме столбик Ноутбука доходит до 300 000, столбик Мыши — 16 500, примерно 1/18 высоты. Совпадает с таблицей.</p>
+<p>Теперь отбор <code>Товар</code> = Ноутбук:</p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/32_otchet_otbor.png" alt="Отчёт с отбором по товару" loading="lazy"><figcaption>Отчёт с отбором по товару</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Отбор «Товар» = Ноутбук, галка включена</td>
+</tr>
+<tr>
+<td>2</td>
+<td>В таблице только Ноутбук: 5 / 300 000,00, Итого то же</td>
+</tr>
+<tr>
+<td>3</td>
+<td>На диаграмме тоже только Ноутбук</td>
+</tr>
+</tbody>
+</table></div>
+<p>Отбор действует и на таблицу, и на диаграмму, потому что стоит на уровне <strong>«Отчет»</strong>.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Без отбора</th>
+<th>Отбор Ноутбук</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Строк в таблице</td>
+<td>2</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Итого Количество</td>
+<td>35</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Итого Сумма</td>
+<td>316 500,00</td>
+<td>300 000,00</td>
+</tr>
+<tr>
+<td>Столбиков</td>
+<td>2</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section class="sec">
+<h2 id="4-ловушки">4. Ловушки</h2>
+<p><strong>1. В поле «Имя» отчёта вписано имя проекта.</strong></p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/06_oshibka_imya.png" alt="Неправильно заполненный мастер" loading="lazy"><figcaption>Неправильно заполненный мастер</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Имя <code>UchebnayaOtchety</code>, синоним «Uchebnaya otchety» — это должно было стать именем <strong>проекта</strong>, а попало в имя <strong>отчёта</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Имя проекта EDT подставил то же</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Симптом:</strong> в предприятии отчёт называется «Uchebnaya otchety», а файл — <code>UchebnayaOtchety.erf</code>.</li>
+<li><strong>Причина:</strong> поле «Имя» в мастере — это имя отчёта, а не проекта. Имя проекта ниже, и EDT заполняет его сам.</li>
+<li><strong>Исправление:</strong> удалить проект (правый клик → «Удалить», галка «Удалить содержимое проекта на диске») и создать заново. Если в EDT проекта уже нет, а папка <code>~/1C/workspaces/edu/UchebnayaOtchety</code> осталась — удали её в Finder.</li>
+</ul>
+<p><strong>2. Пустой базовый проект и версия 8.5.1.</strong></p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/07_oshibka_bazovyi.png" alt="Мастер с пустым базовым проектом" loading="lazy"><figcaption>Мастер с пустым базовым проектом</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>«Базовый проект» пустой</td>
+</tr>
+<tr>
+<td>2</td>
+<td>«Версия» 8.5.1 — подставилась самая новая, а у тебя 8.3.27</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Симптом:</strong> в конструкторе запроса нет документов и справочников; файл не собирается или не открывается твоей платформой.</li>
+<li><strong>Причина:</strong> без базового проекта отчёт не знает про объекты <code>Uchebnaya</code>. Версия выше установленной платформы — 8.3.27 не понимает формат 8.5.</li>
+<li><strong>Исправление:</strong> базовый проект <code>Uchebnaya</code>, версия <code>8.3.27</code>.</li>
+</ul>
+<p><strong>3. «Имя проекта конфликтует с ресурсом на диске».</strong></p>
+<div class="shot-block"><figure class="shot"><img src="img/4-4a/08_oshibka_konflikt.png" alt="Ошибка при повторном создании" loading="lazy"><figcaption>Ошибка при повторном создании</figcaption></figure><table>
+<thead>
+<tr>
+<th>№</th>
+<th>Что это</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Текст ошибки: проект <code>ПриходыПоТоварам</code> конфликтует с ресурсом на диске</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Имя проекта, которое уже занято папкой</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Симптом:</strong> кнопки «Далее» и «Готово» неактивны.</li>
+<li><strong>Причина:</strong> проект удалили из EDT без галки «Удалить содержимое», и папка с тем же именем осталась в рабочей области.</li>
+<li><strong>Исправление:</strong> удали папку <code>~/1C/workspaces/edu/ПриходыПоТоварам</code> в Finder или удаляй проект сразу с содержимым.</li>
+</ul>
+<p><strong>4. База занята.</strong>
+- <strong>Симптом:</strong> при ручной сборке в журнале 1С ошибка блокировки базы, <code>.erf</code> не появился.
+- <strong>Причина:</strong> EDT держит базу открытой, второй процесс 1С к ней не подключается.
+- <strong>Исправление:</strong> скрипт уже работает с копией базы. Если собираешь руками — закрой EDT или используй копию.</p>
+<p><strong>5. Русские буквы в пути.</strong>
+- <strong>Симптом:</strong> 1С падает сразу, в Терминале <code>malloc … abort</code>, файла нет.
+- <strong>Причина:</strong> платформа на Mac не справляется с кириллицей в пути к XML и <code>.erf</code>.
+- <strong>Исправление:</strong> выгрузка только в <code>~/1C/ext</code>. Имя <code>.erf</code> скрипт сам делает транслитом.</p>
+<p><strong>6. <code>Abort trap: 6</code> после «готово».</strong>
+- <strong>Симптом:</strong> в окне Терминала страшные строки об аварийном завершении.
+- <strong>Причина:</strong> 1С падает при выходе, уже <strong>после</strong> сохранения файла.
+- <strong>Исправление:</strong> ничего. Проверяй строку «готово» и файл в <code>ext/build</code>.</p>
+<p><strong>7. Исправил отчёт, а в предприятии старая версия.</strong>
+- <strong>Симптом:</strong> правки в EDT не видны.
+- <strong>Причина:</strong> сохранил в EDT, но не сделал «Экспорт» или не запустил сборку. <code>.erf</code> остался прежним.
+- <strong>Исправление:</strong> весь цикл: <code>Cmd+S</code> → «Экспорт» → скрипт → открыть файл заново. Если форма отчёта уже была открыта — закрой её и открой файл ещё раз.</p>
+<p><strong>8. Отбор работает в таблице, а диаграмма показывает всё.</strong>
+- <strong>Симптом:</strong> в таблице только Ноутбук, на диаграмме оба товара.
+- <strong>Причина:</strong> отбор поставлен на уровне группировки <code>Товар</code>. Диаграмма — отдельный элемент структуры, отбор группировки её не касается.
+- <strong>Исправление:</strong> отбор — на уровне «Отчет» (есть вкладка «Параметры»).</p>
+<p><strong>9. На диаграмме <code>&lt;Авто&gt;</code>.</strong>
+- <strong>Симптом:</strong> два столбика на товар и легенда «Количество, Сумма»; столбики количества почти не видны.
+- <strong>Причина:</strong> <code>&lt;Авто&gt;</code> берёт все выбранные поля уровня «Отчет».
+- <strong>Исправление:</strong> у диаграммы в «Выбранных полях» оставить только <code>Сумма</code>.</p>
+<p><strong>10. Ждёшь отчёт после «Выполнить как».</strong>
+- <strong>Симптом:</strong> предприятие открылось, отчёта нигде нет.
+- <strong>Причина:</strong> запускается база базовой конфигурации, внешний отчёт в неё не входит (шаг 8).
+- <strong>Исправление:</strong> собрать <code>.erf</code> и открыть через «Файл» → «Открыть».</p>
+</section>
+
+<section class="sec">
+<h2 id="5-практика-а">5. Практика А</h2>
+<p><strong>Внешний отчёт <code>ОстаткиНаДату</code>.</strong> Без раздела 2.</p>
+<ul>
+<li>Новый проект внешнего отчёта, базовый проект <code>Uchebnaya</code>, версия <code>8.3.27</code>.</li>
+<li>Источник — регистр накопления <code>ОстаткиТоваров</code>, виртуальная таблица остатков на дату. Параметр <code>Дата</code> пользователь выбирает на форме.</li>
+<li>Таблица: <code>Товар</code>, остаток количества, «Итого».</li>
+<li>Диаграмма: тип <strong>«Круговая»</strong>, точки — <code>Товар</code>, значение — остаток количества.</li>
+<li>Выгрузить в <code>~/1C/ext</code>, собрать скриптом, открыть в предприятии.</li>
+<li><strong>Проверка:</strong> остатки на 31.12.2026 = приходы минус расходы по каждому товару. Сверь с отчётом <code>ДвиженияТоваров</code>.</li>
+</ul>
+<p>После этой практики в <code>ext/build</code> будет два файла — скрипт собирает всё, что лежит в <code>ext/ExternalReports</code>.</p>
+</section>
+
+<section class="sec">
+<h2 id="6-практика-б">6. Практика Б</h2>
+<p><strong>Сквозной проект: внешний отчёт <code>ДиаграммаПродаж.erf</code>.</strong></p>
+<p>Что должно получиться:
+- проект внешнего отчёта <code>ДиаграммаПродаж</code>, базовый — <code>Uchebnaya</code>;
+- данные — табличная часть <code>РасходТовара.Товары</code>, только проведённые документы за период;
+- на форме: «Период» (стандартный период) и отбор «Товар» в быстром доступе;
+- таблица: <code>Товар</code>, <code>Количество</code>, <code>Сумма</code>, строка «Итого»;
+- гистограмма: столбик на каждый товар, высота — <code>Сумма</code>;
+- файл после сборки: <code>~/1C/ext/build/DiagrammaProdazh.erf</code>.</p>
+<p><strong>Проверка:</strong>
+- за тот же период итоги совпадают с отчётом <code>ПродажиЗаПериод</code> из 4.1–4.3;
+- отбор по одному товару меняет и таблицу, и диаграмму.</p>
+<p><strong>Ответь себе:</strong> почему клиенту с типовой ЗГУ на поддержке делают внешний отчёт, а не добавляют отчёт в конфигурацию?</p>
+<p><strong>Git.</strong> Проект внешнего отчёта лежит вне репозитория <code>Uchebnaya</code>. Чтобы он попал в Git, скопируй после сборки в папку репозитория <code>~/1C/workspaces/edu/Uchebnaya/external/</code>:
+- папку <code>ExternalReports</code> из <code>~/1C/ext</code> — исходники XML (их можно загрузить обратно в EDT: «Импорт» → «Внешние обработки и отчеты»);
+- готовые <code>.erf</code> из <code>~/1C/ext/build</code>.</p>
+<p>Коммиты:</p>
+<pre><code>4.4а: внешний отчёт ПриходыПоТоварам (СКД + диаграмма), сборка .erf скриптом build-erf.command
+</code></pre>
+<pre><code>4.4а: проект — внешний отчёт ДиаграммаПродаж.erf (продажи по товарам, таблица + гистограмма)
+</code></pre>
+</section>
+
+<section class="sec">
+<h2 id="7-справочник">7. Справочник</h2>
+<h3 id="где-что-лежит">Где что лежит</h3>
+<table>
+<thead>
+<tr>
+<th>Что</th>
+<th>Где</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Проект внешнего отчёта (EDT)</td>
+<td><code>~/1C/workspaces/edu/ПриходыПоТоварам</code></td>
+</tr>
+<tr>
+<td>XML после «Экспорта»</td>
+<td><code>~/1C/ext/ExternalReports/</code></td>
+</tr>
+<tr>
+<td>Скрипт сборки</td>
+<td><code>~/1C/build-erf.command</code></td>
+</tr>
+<tr>
+<td>Готовые <code>.erf</code> / <code>.epf</code></td>
+<td><code>~/1C/ext/build/</code></td>
+</tr>
+<tr>
+<td>Журнал последней сборки</td>
+<td><code>~/1C/ext/build/log.txt</code></td>
+</tr>
+<tr>
+<td>База, с которой собирает скрипт</td>
+<td>строка <code>BASE=</code> в начале скрипта</td>
+</tr>
+</tbody>
+</table>
+<h3 id="параметры-командной-строки-1с">Параметры командной строки 1С — 👀</h3>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Что значит</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DESIGNER</code></td>
+<td>Запустить конфигуратор (в пакетном режиме — без окон)</td>
+</tr>
+<tr>
+<td><code>/F &lt;папка&gt;</code></td>
+<td>Файловая база в этой папке</td>
+</tr>
+<tr>
+<td><code>/S &lt;сервер&gt;\&lt;база&gt;</code></td>
+<td>Серверная база — вместо <code>/F</code></td>
+</tr>
+<tr>
+<td><code>/N &lt;имя&gt; /P &lt;пароль&gt;</code></td>
+<td>Пользователь и пароль, если в базе есть пользователи</td>
+</tr>
+<tr>
+<td><code>/LoadExternalDataProcessorOrReportFromFiles &lt;xml&gt; &lt;erf&gt;</code></td>
+<td>Собрать <code>.erf</code>/<code>.epf</code> из XML</td>
+</tr>
+<tr>
+<td><code>/DumpExternalDataProcessorOrReportToFiles &lt;xml&gt; &lt;erf&gt;</code></td>
+<td>Обратно: разобрать <code>.erf</code> в XML. Пригодится, чтобы взять чужой отчёт в EDT</td>
+</tr>
+<tr>
+<td><code>/Out &lt;файл&gt;</code></td>
+<td>Куда писать журнал</td>
+</tr>
+</tbody>
+</table>
+<h3 id="типы-диаграмм">Типы диаграмм — 👀</h3>
+<table>
+<thead>
+<tr>
+<th>Тип</th>
+<th>Когда брать</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Гистограмма</td>
+<td>Сравнить значения: продажи по товарам</td>
+</tr>
+<tr>
+<td>Круговая</td>
+<td>Доли от целого: какой товар сколько процентов выручки</td>
+</tr>
+<tr>
+<td>График</td>
+<td>Изменение во времени: продажи по месяцам (точки — период)</td>
+</tr>
+<tr>
+<td>С накоплением</td>
+<td>Сравнить итоги и состав одновременно (нужны серии)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="если-перенесёшь-скрипт-на-другой-mac">Если перенесёшь скрипт на другой Mac — 👀</h3>
+<p>Один раз в Терминале, иначе двойной клик не сработает:</p>
+<pre><code class="language-bash">chmod +x ~/1C/build-erf.command &amp;&amp; xattr -c ~/1C/build-erf.command
+</code></pre>
+<p><code>chmod +x</code> разрешает запуск, <code>xattr -c</code> снимает пометку «скачано из интернета».</p>
+<h3 id="конфигуратор-вместо-edt">Конфигуратор вместо EDT — 👀</h3>
+<p>В Конфигураторе: «Файл» → «Новый» → «Внешний отчет», правишь, «Сохранить» — и сразу получаешь <code>.erf</code>, без выгрузки и сборки. Но исходников для Git нет — только двоичный файл. Поэтому основной путь — EDT.</p>
+</section>
+    </article>
+    <footer class="note-foot"></footer>
+  </main>
+</div>
+<script src="../assets/plan.js"></script>
+<script src="../assets/site.js"></script>
+</body>
+</html>
