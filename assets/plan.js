@@ -1,10 +1,10 @@
 /* План обучения — единственный источник для главной и левой навигации.
    page — путь к странице конспекта от корня сайта. Нет page — задача неактивна.
-   done — отметка «пройдено» по умолчанию (до первой своей отметки в браузере).
+   Отметки «пройдено» хранятся только в браузере (localStorage, ключ c1.done).
+   Текущая задача («сейчас», жёлтая) — первая не отмеченная.
    mode: look 👀 изучить · practice ✍️ практика · key 🔥 ключевое */
 window.PLAN = {
   start: "2026-11-11",
-  current: "4.4б",
   milestones: [
     { date: "2026-12-01", label: "первые рабочие задачи" },
     { date: "2027-02-28", label: "самостоятельный джун" }
@@ -16,28 +16,28 @@ window.PLAN = {
       goal: "Рабочее место, встроенный язык и запросы.",
       chapters: [
         { n: 1, title: "EDT и рабочее место", tasks: [
-          { id: "1.1", title: "Платформа и EDT: где взять и как получить лицензию", mode: "look", done: true, page: "ch1/1-1.html" },
-          { id: "1.2", title: "Проект, рабочая область, информационная база, запуск", mode: "practice", done: true, page: "ch1/1-2.html" },
-          { id: "1.3", title: "Импорт конфигурации из базы или .cf и выгрузка обратно", mode: "practice", done: true, page: "ch1/1-3.html" },
-          { id: "1.4", title: "Git в EDT: репозиторий, коммиты, ветки", mode: "practice", done: true, page: "ch1/1-4.html" },
-          { id: "1.5", title: "Проверка главы", mode: "key", done: true, page: "ch1/1-5.html" }
+          { id: "1.1", title: "Платформа и EDT: где взять и как получить лицензию", mode: "look", page: "ch1/1-1.html" },
+          { id: "1.2", title: "Проект, рабочая область, информационная база, запуск", mode: "practice", page: "ch1/1-2.html" },
+          { id: "1.3", title: "Импорт конфигурации из базы или .cf и выгрузка обратно", mode: "practice", page: "ch1/1-3.html" },
+          { id: "1.4", title: "Git в EDT: репозиторий, коммиты, ветки", mode: "practice", page: "ch1/1-4.html" },
+          { id: "1.5", title: "Проверка главы", mode: "key", page: "ch1/1-5.html" }
         ]},
         { n: 2, title: "Встроенный язык", tasks: [
-          { id: "2.1", title: "Типы, условия, циклы, процедуры и функции, параметры «Знач»", mode: "look", done: true, page: "ch2/2-1.html" },
-          { id: "2.2", title: "Коллекции: массив, структура, соответствие, таблица значений", mode: "key", done: true, page: "ch2/2-2.html" },
-          { id: "2.3", title: "Объектная модель: менеджеры, ссылки, объекты, запись", mode: "key", done: true, page: "ch2/2-3.html" },
-          { id: "2.4", title: "Модули и события: объекта, менеджера, формы, общие модули", mode: "practice", done: true, page: "ch2/2-4.html" },
-          { id: "2.5", title: "Отладчик и обработка ошибок", mode: "practice", done: true, page: "ch2/2-5.html" },
-          { id: "2.6", title: "Проверка главы", mode: "key", done: true, page: "ch2/2-6.html" }
+          { id: "2.1", title: "Типы, условия, циклы, процедуры и функции, параметры «Знач»", mode: "look", page: "ch2/2-1.html" },
+          { id: "2.2", title: "Коллекции: массив, структура, соответствие, таблица значений", mode: "key", page: "ch2/2-2.html" },
+          { id: "2.3", title: "Объектная модель: менеджеры, ссылки, объекты, запись", mode: "key", page: "ch2/2-3.html" },
+          { id: "2.4", title: "Модули и события: объекта, менеджера, формы, общие модули", mode: "practice", page: "ch2/2-4.html" },
+          { id: "2.5", title: "Отладчик и обработка ошибок", mode: "practice", page: "ch2/2-5.html" },
+          { id: "2.6", title: "Проверка главы", mode: "key", page: "ch2/2-6.html" }
         ]},
         { n: 3, title: "Язык запросов", tasks: [
-          { id: "3.1", title: "Конструктор, параметры", mode: "look", done: true, page: "ch3/3-1.html" },
-          { id: "3.2", title: "Соединения, объединение, группировка, итоги", mode: "practice", done: true, page: "ch3/3-2.html" },
-          { id: "3.3", title: "Виртуальные таблицы: остатки, обороты, срез последних", mode: "key", done: true, page: "ch3/3-3.html" },
-          { id: "3.4", title: "Временные таблицы, пакетные запросы", mode: "key", done: true, page: "ch3/3-4.html" },
-          { id: "3.5", title: "Консоль запросов, обход результата", mode: "practice", done: true, page: "ch3/3-5.html" },
-          { id: "3.6", title: "Ошибки производительности: запрос в цикле, «точки»", mode: "look", done: true, page: "ch3/3-6.html" },
-          { id: "3.7", title: "Проверка главы", mode: "key", done: true, page: "ch3/3-7.html" }
+          { id: "3.1", title: "Конструктор, параметры", mode: "look", page: "ch3/3-1.html" },
+          { id: "3.2", title: "Соединения, объединение, группировка, итоги", mode: "practice", page: "ch3/3-2.html" },
+          { id: "3.3", title: "Виртуальные таблицы: остатки, обороты, срез последних", mode: "key", page: "ch3/3-3.html" },
+          { id: "3.4", title: "Временные таблицы, пакетные запросы", mode: "key", page: "ch3/3-4.html" },
+          { id: "3.5", title: "Консоль запросов, обход результата", mode: "practice", page: "ch3/3-5.html" },
+          { id: "3.6", title: "Ошибки производительности: запрос в цикле, «точки»", mode: "look", page: "ch3/3-6.html" },
+          { id: "3.7", title: "Проверка главы", mode: "key", page: "ch3/3-7.html" }
         ]}
       ]
     },
@@ -47,9 +47,9 @@ window.PLAN = {
       goal: "Отчёты, печатные формы и простые доработки типовой.",
       chapters: [
         { n: 4, title: "СКД и внешние отчёты", dates: "11–17 ноября", tasks: [
-          { id: "4.1", title: "Наборы данных, параметры, отборы", mode: "key", done: true, page: "ch4/4-1.html" },
-          { id: "4.2", title: "Ресурсы, группировки, вычисляемые поля", mode: "key", done: true, page: "ch4/4-2.html" },
-          { id: "4.3", title: "Варианты, пользовательские настройки, оформление", mode: "practice", done: true, page: "ch4/4-3.html" },
+          { id: "4.1", title: "Наборы данных, параметры, отборы", mode: "key", page: "ch4/4-1.html" },
+          { id: "4.2", title: "Ресурсы, группировки, вычисляемые поля", mode: "key", page: "ch4/4-2.html" },
+          { id: "4.3", title: "Варианты, пользовательские настройки, оформление", mode: "practice", page: "ch4/4-3.html" },
           { id: "4.4а", title: "Внешний отчёт без БСП", mode: "key", page: "ch4/4-4a.html" },
           { id: "4.4б", title: "Внешний отчёт через «Дополнительные отчёты и обработки»", mode: "key", page: "ch4/4-4b.html" },
           { id: "4.5", title: "Проверка главы", mode: "key" }

@@ -21,8 +21,13 @@
 
   var done = null;
   try { done = JSON.parse(get("c1.done") || "null"); } catch (e) {}
-  if (!done) { done = {}; allTasks.forEach(function (t) { if (t.done) done[t.id] = true; }); }
+  if (!done || typeof done !== "object") done = {};
   function isDone(id) { return !!done[id]; }
+  // Текущая задача — первая не отмеченная в этом браузере
+  function curId() {
+    for (var i = 0; i < allTasks.length; i++) if (!isDone(allTasks[i].id)) return allTasks[i].id;
+    return null;
+  }
   function setDone(id, v) { if (v) done[id] = true; else delete done[id]; set("c1.done", JSON.stringify(done)); }
 
   function el(tag, attrs, kids) {
@@ -182,13 +187,10 @@
   /* ---------- главная ---------- */
   function home() {
     var root = document.getElementById("plan"); if (!root) return;
-    var cur = byId[P.current];
 
     var st = document.getElementById("status");
     var doneCount = allTasks.filter(function (t) { return isDone(t.id); }).length;
-    var nowLine = el("p", { class: "now" }, ["Сейчас: "]);
-    var curName = cur.id + " " + cur.title;
-    nowLine.appendChild(cur.page ? el("a", { href: href(cur), text: curName }) : el("strong", { text: curName }));
+    var nowLine = el("p", { class: "now" });
     var facts = P.milestones.map(function (m) {
       var d = dayDiff(m.date);
       return d > 0 ? "до этапа «" + m.label + "» " + d + " " + plural(d, "день", "дня", "дней") : null;
@@ -201,7 +203,7 @@
     chapters.forEach(function (c, ci) {
       if (ci) bar.appendChild(el("i", { class: "gap" }));
       c.tasks.forEach(function (t) {
-        bar.appendChild(el("i", { class: isDone(t.id) ? "done" : t.id === P.current ? "cur" : "", title: t.id + " " + t.title, "data-id": t.id }));
+        bar.appendChild(el("i", { title: t.id + " " + t.title, "data-id": t.id }));
       });
     });
     st.appendChild(bar);
@@ -228,13 +230,12 @@
         ]));
         var ol = el("ol", { class: "tasks" + (chFolded ? " gone" : ""), id: "ch-tasks-" + c.n });
         c.tasks.forEach(function (t) {
-          var cls = "task" + (isDone(t.id) ? " is-done" : "") + (t.id === P.current ? " is-current" : "");
+          var cls = "task" + (isDone(t.id) ? " is-done" : "");
           var cb = el("input", { type: "checkbox", "aria-label": "Пройдено: " + t.id });
           cb.checked = isDone(t.id);
           cb.onchange = function () { setDone(t.id, cb.checked); refreshHome(true); };
           var title = t.page ? el("a", { class: "t-title", href: href(t), text: t.title })
                              : el("span", { class: "t-title", title: "Конспекта пока нет", text: t.title });
-          if (t.id === P.current) title.appendChild(el("span", { class: "badge-now", text: "сейчас" }));
           var m = MODES[t.mode];
           ol.appendChild(el("li", { class: cls, "data-id": t.id }, [
             el("label", { class: "chk" }, [cb]),
@@ -250,6 +251,7 @@
       root.appendChild(sec);
     });
     foldAllLabel();
+    refreshHome(false);
     var foldAll = document.getElementById("fold-all");
     if (foldAll && !foldAll.dataset.bound) {
       foldAll.dataset.bound = 1;
@@ -280,8 +282,8 @@
     if (reset && !reset.dataset.bound) {
       reset.dataset.bound = 1;
       reset.onclick = function () {
-        if (!confirm("Вернуть отметки как в плане? Свои отметки пропадут.")) return;
-        done = {}; allTasks.forEach(function (t) { if (t.done) done[t.id] = true; });
+        if (!confirm("Снять все отметки «пройдено»?")) return;
+        done = {};
         set("c1.done", JSON.stringify(done));
         root.querySelectorAll(".task input").forEach(function (cb) { cb.checked = isDone(cb.closest(".task").getAttribute("data-id")); });
         refreshHome(true);
@@ -332,11 +334,28 @@
   function refreshHome(animate) {
     var root = document.getElementById("plan"); if (!root) return;
     var f = document.querySelector("#status .facts"); if (f) f.textContent = factsText();
+    var cid = curId(), cur = cid && byId[cid];
+    var now = document.querySelector("#status .now");
+    if (now) {
+      now.textContent = "";
+      if (cur) {
+        now.appendChild(document.createTextNode("Сейчас: "));
+        var curName = cur.id + " " + cur.title;
+        now.appendChild(cur.page ? el("a", { href: href(cur), text: curName }) : el("strong", { text: curName }));
+      } else now.appendChild(el("strong", { text: "Все задачи плана пройдены" }));
+    }
     document.querySelectorAll("#status .bar i[data-id]").forEach(function (i) {
       var id = i.getAttribute("data-id");
-      i.className = isDone(id) ? "done" : id === P.current ? "cur" : "";
+      i.className = isDone(id) ? "done" : id === cid ? "cur" : "";
     });
-    root.querySelectorAll(".task").forEach(function (li) { li.classList.toggle("is-done", isDone(li.getAttribute("data-id"))); });
+    root.querySelectorAll(".task").forEach(function (li) {
+      var id = li.getAttribute("data-id"), isCur = id === cid;
+      li.classList.toggle("is-done", isDone(id));
+      li.classList.toggle("is-current", isCur);
+      var badge = li.querySelector(".badge-now");
+      if (isCur && !badge) li.querySelector(".t-title").appendChild(el("span", { class: "badge-now", text: "сейчас" }));
+      if (!isCur && badge) badge.remove();
+    });
     chapters.forEach(function (c) {
       var art = root.querySelector('[data-ch="' + c.n + '"]'); if (!art) return;
       var n = c.tasks.filter(function (t) { return isDone(t.id); }).length;
