@@ -52,7 +52,7 @@ window.PLAN = {
           { id: "4.3", title: "Варианты, пользовательские настройки, оформление", mode: "practice", page: "ch4/4-3.html" },
           { id: "4.4а", title: "Внешний отчёт без БСП", mode: "key", page: "ch4/4-4a.html" },
           { id: "4.4б", title: "Внешний отчёт через «Дополнительные отчёты и обработки»", mode: "key", page: "ch4/4-4b.html" },
-          { id: "4.5", title: "Проверка главы", mode: "key" }
+          { id: "4.5", title: "Проверка главы", mode: "key", page: "ch4/4-5.html" }
         ]},
         { n: 5, title: "Печатные формы и минимум форм", dates: "18–24 ноября", tasks: [
           { id: "5.1", title: "Клиент и сервер", mode: "practice" },
