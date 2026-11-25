@@ -55,7 +55,7 @@ window.PLAN = {
           { id: "4.5", title: "Проверка главы", mode: "key", page: "ch4/4-5.html" }
         ]},
         { n: 5, title: "Печатные формы и минимум форм", dates: "18–24 ноября", tasks: [
-          { id: "5.1", title: "Клиент и сервер", mode: "practice" },
+          { id: "5.1", title: "Клиент и сервер", mode: "practice", page: "ch5/5-1.html" },
           { id: "5.2", title: "Реквизиты, элементы, команды формы", mode: "practice" },
           { id: "5.3", title: "Табличный документ: макет, области, параметры", mode: "practice" },
           { id: "5.4", title: "Печатная форма документа", mode: "key" },
